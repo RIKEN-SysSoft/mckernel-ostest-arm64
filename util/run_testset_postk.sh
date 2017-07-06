@@ -1,223 +1,7 @@
 #!/bin/sh
 # run_testset_postk.sh COPYRIGHT FUJITSU LIMITED 2015-2018
-this_dir="$(cd $(dirname $0); pwd)"
-source "${this_dir}/config"
 
-# test file
-temp=$this_dir/tempfile
-link=/tmp/templink
-mmapfile_name=$this_dir/mmapfile
-ostype_name=$this_dir/ostype
-org_pid_max=/proc/sys/kernel/pid_max
-pid_max_name=$this_dir/pid_max
-cpuinfo_path=/proc/mcos0/cpuinfo
-lv07_tmp=$this_dir/lv07.txt
-lv07_tmp_before=$this_dir/lv07_before.txt
-
-# ostype string
-ostype_str="Linux"
-
-# loop counter
-count=0
-
-# test user
-test_user_name="mck_test"
-
-# for siginfo TP send signal.
-signal_name="HUP INT QUIT ILL TRAP ABRT EMT FPE KILL BUS SEGV SYS PIPE ALRM TERM URG STOP TSTP CONT CHLD TTIN TTOU IO XCPU XFSZ VTALRM PROF WINCH PWR USR1 USR2"
-
-siginfo_send_signal() {
-  local pid=$1
-  for sig in $signal_name ; do
-    if [ ${sig} == "KILL" ] ; then
-      continue
-    elif [ ${sig} == "STOP" ] ; then
-      continue
-    elif [ ${sig} == "TSTP" ] ; then
-      continue
-    elif [ ${sig} == "CONT" ] ; then
-      continue
-    elif [ ${sig} == "CHLD" ] ; then
-      continue
-    elif [ ${sig} == "TTIN" ] ; then
-      continue
-    elif [ ${sig} == "TTOU" ] ; then
-      continue
-    fi
-    echo -e "send SIG${sig} to ${pid}"
-    kill -${sig} ${pid}
-    sleep 1
-  done
-}
-
-# parse parameter
-usage()
-{
-  echo "$0 [-e] [-p <presetnum>] [-s <separationnum>] [-h]"
-  echo "  options:"
-  echo "    -e  use execve regression."
-  echo "    -p  use NUMA-preset setting."
-  echo "      1: 4 nodes, 512 MiB separation"
-  echo "      2: 4 nodes,   1 GiB separation"
-  echo "      3: 4 nodes,   2 GiB separation"
-  echo "      4: 4 nodes,   3 GiB separation"
-  echo "      5: 4 nodes,   4 GiB separation"
-  echo "    -s  separation running number."
-  echo "      0 or none: run all."
-  echo "      1-10     : on the way running."
-  echo "      any      : setting nothing, print usage."
-  echo "    -h  show usage."
-}
-
-# option check
-execve_comm=
-execve_arg_end=
-mck_max_mem_size=
-mck_max_node_mem_size=
-mck_max_cpus=`cat /proc/cpuinfo | grep -c "processor"`
-mck_max_cpus=`expr $mck_max_cpus - 1`
-boot_numa_opt=""
-sep_run_num=0
-while getopts ep:s:h OPT
-do
-  case $OPT in
-    e)
-      execve_comm="${app_dir}/test_mck -s execve -n 1 -- -f"
-      execve_arg_end="--"
-      ;;
-    p)
-      boot_numa_opt="-p $OPTARG"
-      ;;
-    s)
-      sep_run_num=$OPTARG
-      if [ $sep_run_num -lt 0 -o 10 -lt $sep_run_num ]; then
-        usage
-        exit 1
-      fi
-      ;;
-    h)
-      usage
-      exit 0
-      ;;
-  esac
-done
-shift `expr $OPTIND - 1`
-
-host_core=0
-mck_core=""
-ikc_map=""
-max_core=0
-min_core=`cat /proc/cpuinfo | grep processor | cut -d ' ' -f 2 | head -1`
-lines=`cat /proc/cpuinfo | grep processor | cut -d ' ' -f 2`
-while read line
-do
-	if [ $max_core -lt $line ]; then
-		max_core=$line
-	fi
-
-	if [ $min_core -gt $line ]; then
-		min_core=$line
-	fi
-done << END
-$lines
-END
-
-# check full configuration
-if [ $max_core -eq 59 ]; then
-	host_core="0-3"
-	mck_core="12-59"
-	ikc_map="12-23:0+24-35:1+36-47:2+48-59:3"
-	mck_max_cpus=`expr $mck_max_cpus - 3`
-elif [ $max_core -eq 51 ]; then
-	host_core="0,13,26,39"
-	mck_core="1-12,14-25,27-38,40-51"
-	ikc_map="1-12:0+14-25:13+27-38:26+40-51:39"
-	mck_max_cpus=`expr $mck_max_cpus - 3`
-elif [ $max_core -eq 15 ]; then
-	host_core="0-3"
-	mck_core="4-15"
-	ikc_map="4,8,12:0+5,9,13:1+6,10,14:2+7,11,15:3"
-	mck_max_cpus=`expr $mck_max_cpus - 3`
-else
-	host_core=$min_core
-	mck_core="1-${max_core}"
-	ikc_map="1-${max_core}:0"
-fi
-
-# get mck ap num
-mck_ap_num=`expr $mck_max_cpus - 1`
-mck_ap_num_even=$mck_ap_num
-
-if [ `expr $mck_ap_num_even % 2` != 0 ]; then
-  mck_ap_num_even=`expr $mck_ap_num_even - 1`
-fi
-
-# run regression
-#while :
-#do
-	#### initialize ####
-	addusr=0
-	useradd $test_user_name
-	if [ "$?" -eq 0 ]; then
-		uid=`id -u $test_user_name`
-		gid=`id -g $test_user_name`
-		addusr=1
-	else
-		uid=1000
-		gid=1050
-	fi
-	echo "use uid:$uid gid:$gid"
-
-	echo a > $mmapfile_name
-	dd if=/dev/zero of=${temp} bs=1M count=10
-	ln -s ${temp} ${link}
-
-	echo $ostype_str > $ostype_name
-	cat $org_pid_max > $pid_max_name
-
-	#### console output setting ####
-	orig_printk_setting=`cat /proc/sys/kernel/printk`
-	echo "set 4 4 1 7 => /proc/sys/kernel/printk"
-	echo "4 4 1 7" > /proc/sys/kernel/printk
-
-	#### host output corefile-name setting ####
-	orig_core_pattern=`cat /proc/sys/kernel/core_pattern`
-	echo "set core.host.%p => /proc/sys/kernel/core_pattern"
-	echo "core.host.%p" > /proc/sys/kernel/core_pattern
-
-	#### host output corefile limitsize setting ####
-	orig_core_rlimit=`ulimit -S -c`
-	echo "set ulimit -S -c 0"
-	ulimit -S -c 0
-
-	#### boot McKernel ####
-	sh "$shutdown_mck_sh"
-	echo "boot McKernel, HOST core is #$host_core"
-	sh $run_mck_sh -a $host_core $boot_numa_opt -v -r $ikc_map
-
-	#### get McKernel memory size ####
-	echo "get McKernel memory size."
-	query_mem_str=`"$ihkosctl" 0 query mem`
-	mck_max_mem_size=`echo $query_mem_str | sed -e 's/@[0-9]*,/ + /g' | sed -e 's/@[0-9]*$//g' | xargs expr`
-	mck_max_mem_size_95p=`expr $mck_max_mem_size / 20`
-	mck_max_mem_size_110p=`expr $mck_max_mem_size_95p \* 22`
-	mck_max_mem_size_95p=`expr $mck_max_mem_size_95p \* 19`
-
-	query_mem_sep_str=`echo $query_mem_str | sed -e 's/@[0-9]*,/,/g' | sed -e 's/@[0-9]*$//g'`
-	mck_max_node_mem_size=`echo $query_mem_sep_str | cut -d ',' -f 1`
-	query_mem_sep_str=`echo $query_mem_sep_str | sed -e 's/,/ /g'`
-	for i in $query_mem_sep_str
-	do
-		if [ $mck_max_node_mem_size -lt $i ]; then
-			mck_max_node_mem_size=$i
-		fi
-	done
-	echo "mck_max_mem_size     :$mck_max_mem_size"
-	echo "mck_max_node_mem_size:$mck_max_node_mem_size"
-
-	#### insmod test driver ####
-	echo "insmod test_drv"
-	sh "$insmod_test_drv_sh"
+source ./before_run_testcase.sh
 
 # RT_BLOCK 1 start
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
@@ -232,17 +16,19 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 	${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name
 
 	count=1
-	touch ${lv07_tmp_before}
+	${DRYRUN} touch ${lv07_tmp_before}
 	while [ $count -le $mck_max_cpus ]
 	do
-		${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $count | tee ${lv07_tmp}
+		${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $count ${DRYRUN_QUOTE}| tee ${lv07_tmp}${DRYRUN_QUOTE}
+		if [ "$DRYRUN" != ":" ]; then
 		work_str=`cat ${lv07_tmp}`
 		echo ${work_str} | grep -o ".:${ostype_str}" | sort > ${lv07_tmp}
 		diff ${lv07_tmp_before} ${lv07_tmp}
 		mv ${lv07_tmp} ${lv07_tmp_before}
+		fi
 		count=`expr $count + 1`
 	done
-	rm ${lv07_tmp_before}
+	${DRYRUN} rm ${lv07_tmp_before}
 	count=0
 
 	echo "## lv09 ##"
@@ -316,11 +102,11 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 
 	#### test_mck case ####
 	echo "## siginfo ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 0
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 1 &
-	sleep 3
-	siginfo_send_signal `pidof mcexec`
-	sleep 1
+	${DRYRUN} ${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 0
+	${DRYRUN} ${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 1 &
+	${DRYRUN} sleep 3
+	${DRYRUN} siginfo_send_signal `$pidof_mcexec`
+	${DRYRUN} sleep 1
 
 	echo "## wait4 ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s wait4 -n 0 
@@ -350,14 +136,10 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 	done
 
 	echo "## mem_stack_limits ##"
-	echo "MCKERNEL_RLIMIT_STACK=10MiB(10240 KiB),10MiB(10240 KiB)"
-	export MCKERNEL_RLIMIT_STACK=10485760,10485760
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 9961472
+	${mcexec} -s 10485760,10485760 $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 9961472
 
 	if [ $mck_max_mem_size -ge 2244120412 ]; then
-		echo "MCKERNEL_RLIMIT_STACK=2GiB(2097152 KiB),2GiB(2097152 KiB)"
-		export MCKERNEL_RLIMIT_STACK=2147483648,2147483648
-		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 2040109466
+		${mcexec} -s 2147483648,2147483648 $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 2040109466
 	else
 		echo "## mem_stack_limits 2GiB SKIP ##"
 	fi
@@ -368,27 +150,19 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 3 ]; then
 	if [ $sep_run_num -eq 3 ]; then
 		echo "## mem_stack_limits ##"
 	fi
-	echo "MCKERNEL_RLIMIT_STACK=mckernel_max_memory_size x 110%"
-	export MCKERNEL_RLIMIT_STACK=$mck_max_mem_size_110p,$mck_max_mem_size_110p
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_95p
-
-	if [ $sep_run_num -eq 3 ]; then
-		echo "unset MCKERNEL_RLIMIT_STACK"
-		unset MCKERNEL_RLIMIT_STACK
-	fi
+	${DRYRUN} echo "MCKERNEL_RLIMIT_STACK=mckernel_max_memory_size x 110%"
+	${mcexec} -s ${DRYRUN_QUOTE}${mck_max_mem_size_110p},${mck_max_mem_size_110p}${DRYRUN_QUOTE} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_95p
 fi # RT_BLOCK 3 end
 
 # RT_BLOCK 4 start
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 4 ]; then
 	if [ $sep_run_num -eq 4 ]; then
 		echo "## mem_stack_limits ##"
-		echo "MCKERNEL_RLIMIT_STACK=mckernel_max_memory_size x 110%"
-		export MCKERNEL_RLIMIT_STACK=$mck_max_mem_size_110p,$mck_max_mem_size_110p
+		${DRYRUN} echo "MCKERNEL_RLIMIT_STACK=mckernel_max_memory_size x 110%"
+		${mcexec} -s ${DRYRUN_QUOTE}${mck_max_mem_size_110p},${mck_max_mem_size_110p}${DRYRUN_QUOTE} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
+	else
+		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
 	fi
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
-
-	echo "unset MCKERNEL_RLIMIT_STACK"
-	unset MCKERNEL_RLIMIT_STACK
 fi # RT_BLOCK 4 end
 
 # RT_BLOCK 5 start
@@ -442,7 +216,9 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s rt_sigprocmask -n 0
 
 	echo "## mmap_populate ##"
+	if [ "$DRYRUN" != ":" ]; then
 	echo a > $mmapfile_name
+	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_populate -n 0 -- -f $mmapfile_name
 
 	echo "## mem_large_page ##"
@@ -463,13 +239,15 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s tls -n 1 -- -t $mck_ap_num
 
 	echo "## mmap_file ##"
-	rm -f $mmapfile_name
+	${DRYRUN} rm -f $mmapfile_name
 	for tp_num in `seq 0 48`
 	do	
+		if [ "$DRYRUN" != ":" ]; then
 		echo a > $mmapfile_name
-		cat $mmapfile_name
+		fi
+		${DRYRUN} cat $mmapfile_name
 		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_file -n $tp_num -- -f $mmapfile_name
-		cat $mmapfile_name
+		${DRYRUN} cat $mmapfile_name
 	done
 
 	echo "## execve ##"
@@ -496,13 +274,15 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n 17
 	for tp_num in `seq 18 19`
 	do
-		ulimit -S -c unlimited
+		${DRYRUN} ulimit -S -c unlimited
 		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n $tp_num -- -f $mmapfile_name
+		if [ "$DRYRUN" != ":" ]; then
 		ulimit -S -c 0
 		mv core core.madvise$tp_num.$$
 		echo "generate corefile: core.madvise$tp_num.$$"
 		gdb -x $app_dir/madvise$tp_num.inf $app_dir/test_mck core.madvise$tp_num.$$
 		readelf -l core.madvise$tp_num.$$ | tail -16
+		fi
 	done
 
 	echo "## cpu_proc_limits ##"
@@ -608,15 +388,17 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s vfork -n 2 -- -f "$app_dir/execve_app"
 
 	echo "## coredump ##"
-	echo "This test case setting corefile rlimit unlimited."
-	ulimit -S -c unlimited
+	${DRYRUN} echo "This test case setting corefile rlimit unlimited."
+	${DRYRUN} ulimit -S -c unlimited
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s coredump -n 0
+	if [ "$DRYRUN" != ":" ]; then
 	ulimit -S -c 0
 	mv core core.$$
 	echo "generate corefile: core.$$"
 	readelf -a core.$$
 	file core.$$
 	gdb -x $app_dir/autorun.inf $app_dir/test_mck core.$$
+	fi
 
 	echo "## popen ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s popen -n 0
@@ -665,7 +447,9 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 
 	echo "## get_cpu_id ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s get_cpu_id -n 0
+	if [ "$DRYRUN" != ":" ]; then
 	sh "$kmsgcat_sh" | grep "TPLOG:sys_get_cpu_id"
+	fi
 
 	echo "## setpgid ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setpgid -n 0
@@ -934,9 +718,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	if [ "${execve_comm}" != "" ]; then
 		binfmt_prefix_comm="$execve_comm"
 	fi
-	export MCEXEC_WL="$(cd ${app_base}; pwd -P)"
-	$binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0
-	unset MCEXEC_WL
+	MCEXEC_WL=${DRYRUN_QUOTE}$(cd ${app_dir}; pwd -P)${DRYRUN_QUOTE} $binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0
 
 	echo "## time_sharing ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s time_sharing -n 0
@@ -1042,7 +824,9 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 
 	echo "## track syscalls ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s track_syscalls -n 0
+	if [ "$DRYRUN" != ":" ]; then
 	"$ihkosctl" 0 kmsg | grep -E "\(271, *\"process_vm_writev\"\):"
+	fi
 
 	echo "## msr instruction emulation  ##"
 	for tp_num in `seq 0 33`
@@ -1056,9 +840,11 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s fstatat -n $tp_num
 	done
 
+	if [ "$linux_run" == "no" ]; then
 	echo "## freeze_thaw ##"
 	echo "## freeze_thaw test#0 (a.out -> freeze -> thaw) ##"
 	${mcexec} $execve_comm "${app_dir}/single_node" &
+	if [ "$DRYRUN" != ":" ]; then
 	sleep 1
 
 	"${app_dir}/freeze_thaw" 0 freeze
@@ -1068,25 +854,26 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 		echo "sleep ${i} second elapsed."
 	done
 	"${app_dir}/freeze_thaw" 0 thaw
-	wait `pidof mcexec`
+	wait `$pidof_mcexec`
+	fi
 
-	echo "## freeze_thaw test#1 (freeze -> a.out -> thaw) ##"
-	"${app_dir}/freeze_thaw" 0 freeze
-	${mcexec} $execve_comm "${app_dir}/glibc_hello_world" &
-	for i in `seq 1 3`
-	do
-		sleep 1
-		echo "sleep ${i} second elapsed."
-	done
-	"${app_dir}/freeze_thaw" 0 thaw
-	wait `pidof mcexec`
+#SKIP	echo "## freeze_thaw test#1 (freeze -> a.out -> thaw) ##"
+#SKIP	"${app_dir}/freeze_thaw" 0 freeze
+#SKIP	${mcexec} $execve_comm "${app_dir}/glibc_hello_world" &
+#SKIP	for i in `seq 1 3`
+#SKIP	do
+#SKIP		sleep 1
+#SKIP		echo "sleep ${i} second elapsed."
+#SKIP	done
+#SKIP	"${app_dir}/freeze_thaw" 0 thaw
+#SKIP	wait `$pidof_mcexec`
 
-	echo "## freeze_thaw test#2 (freeze -> a.out -> kill a.out -> thaw) ##"
-	"${app_dir}/freeze_thaw" 0 freeze
-	${mcexec} $execve_comm "${app_dir}/glibc_hello_world" &
-	kill `pidof mcexec`
-	"${app_dir}/freeze_thaw" 0 thaw
-	${mcexec} $execve_comm "${app_dir}/glibc_hello_world"
+#SKIP	echo "## freeze_thaw test#2 (freeze -> a.out -> kill a.out -> thaw) ##"
+#SKIP	"${app_dir}/freeze_thaw" 0 freeze
+#SKIP	${mcexec} $execve_comm "${app_dir}/glibc_hello_world" &
+#SKIP	kill `$pidof_mcexec`
+#SKIP	"${app_dir}/freeze_thaw" 0 thaw
+#SKIP	${mcexec} $execve_comm "${app_dir}/glibc_hello_world"
 
 	echo "## cpu_pa_info ##"
 	echo "## cpu_pa_info test#0 ##"
@@ -1113,9 +900,12 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 
 	echo "## get_rusage test#1 (user multi thread process rinning) ##"
 	${mcexec} $execve_comm "${app_dir}/single_node" &
+	if [ "$DRYRUN" != ":" ]; then
 	sleep 1
 	"${app_dir}/get_rusage" 0
-	wait `pidof mcexec`
+	wait `$pidof_mcexec`
+	fi
+	fi
 
 #	echo "## uti ##"
 #	for tp_num in `seq 0 17`
@@ -1127,39 +917,23 @@ fi # RT_BLOCK 10 end
 
 	echo "## force_exit ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s force_exit -n 0 -- -f $mmapfile_name -d /dev/test_mck/mmap_dev &
+	if [ "$DRYRUN" != ":" ]; then
 	sleep 3
 	echo "send SIGKILL for mcexec."
-	kill -9 `pidof mcexec`
-	echo "rmmod test_drv"
-	sh "$rmmod_test_drv_sh"
+	kill -9 `$pidof_mcexec`
+	fi
 
+	if [ "$DRYRUN" != ":" ] && [ "$linux_run" == "no" ]; then
 	echo "shutdown_mck... (mcctrl.ko no unload, and reboot mck.)"
 	sh "$shutdown_mck_sh" -m
 	sh $run_mck_sh -a $host_core $boot_numa_opt -v -r $ikc_map
-	${mcexec} $execve_comm "${app_dir}/glibc_hello_world"
-	sh "$shutdown_mck_sh"
-
-	#### finalize ####
-	#### host output corefile limitsize setting restore ####
-	echo "restore ulimit -S -c $orig_core_rlimit"
-	ulimit -S -c $orig_core_rlimit
-
-	#### host output corefile-name setting restore ####
-	echo "restore $orig_core_pattern => /proc/sys/kernel/core_pattern"
-	echo $orig_core_pattern > /proc/sys/kernel/core_pattern
-
-	#### console output setting restore ####
-	echo "restore $orig_printk_setting => /proc/sys/kernel/printk"
-	echo $orig_printk_setting > /proc/sys/kernel/printk
-
-	rm $ostype_name
-	rm $pid_max_name
-	rm $link
-	rm $temp
-	rm $mmapfile_name
-	if [ "$addusr" -eq 1 ]; then
-		userdel $test_user_name
 	fi
+
+	if [ "$DRYRUN" != ":" ]; then
+	${mcexec} $execve_comm "${app_dir}/glibc_hello_world"
+	fi
+
+	source ./after_run_testcase.sh
 
 #	if [ -e ${sh_base}/continue_end ]; then
 #		echo "find continue_end file."
