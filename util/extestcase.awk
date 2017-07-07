@@ -11,9 +11,9 @@ function append_testscript(filename) {
 
 BEGIN { 
     "pwd -P" | getline cwd;
-    testlistfile = sprintf("%s/testlist", cwd);
-    testcasedir = sprintf("%s/%s", cwd, "testcase"); 
-    outputdir = sprintf("%s/%s", cwd, "output");
+    testcasedir = sprintf("%s/%s", cwd, "testcase_linux"); 
+    outputdir = sprintf("%s/%s", cwd, "output_linux");
+    testlistfile = sprintf("%s/testlist_linux", cwd);
     system("rm -f " testlistfile);
     system("rm -rf " testcasedir);
     system("rm -rf " outputdir);
