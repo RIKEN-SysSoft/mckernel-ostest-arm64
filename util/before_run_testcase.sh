@@ -53,7 +53,7 @@ usage()
 {
   echo "$0 [-e] [-p <presetnum>] [-s <separationnum>] [-d] [-h]"
   echo "  options:"
-  echo "    -H  Generate Linux reference results"
+  echo "    -H  Generate Linux outputs"
   echo "    -e  use execve regression."
   echo "    -p  use NUMA-preset setting."
   echo "      1: 4 nodes, 512 MiB separation"

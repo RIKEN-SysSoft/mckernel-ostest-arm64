@@ -102,11 +102,13 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 
 	#### test_mck case ####
 	echo "## siginfo ##"
-	${DRYRUN} ${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 0
-	${DRYRUN} ${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 1 &
-	${DRYRUN} sleep 3
-	${DRYRUN} siginfo_send_signal `$pidof_mcexec`
-	${DRYRUN} sleep 1
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 0
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 1 ${DRYRUN_QUOTE}&${DRYRUN_QUOTE}
+	if [ "$DRYRUN" != ":" ]; then
+	sleep 3
+	siginfo_send_signal `$pidof_mcexec`
+	sleep 1
+	fi
 
 	echo "## wait4 ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s wait4 -n 0 
