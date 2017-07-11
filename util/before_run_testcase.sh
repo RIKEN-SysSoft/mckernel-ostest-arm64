@@ -144,9 +144,6 @@ do
 done
 shift `expr $OPTIND - 1`
 
-host_core=0
-mck_core=""
-ikc_map=""
 max_core=0
 min_core=`cat /proc/cpuinfo | grep processor | cut -d ' ' -f 2 | head -1`
 lines=`cat /proc/cpuinfo | grep processor | cut -d ' ' -f 2`
@@ -164,29 +161,28 @@ $lines
 END
 
 # check full configuration
-mck_max_cpus=`cat /proc/cpuinfo | grep -c "processor"`
-if [ "$linux_run" == "no" ]; then
-if [ $max_core -eq 59 ]; then
-	host_core="0-3"
-	mck_core="12-59"
-	ikc_map="12-23:0+24-35:1+36-47:2+48-59:3"
-	mck_max_cpus=`expr $mck_max_cpus - 3`
-elif [ $max_core -eq 51 ]; then
-	host_core="0,13,26,39"
-	mck_core="1-12,14-25,27-38,40-51"
-	ikc_map="1-12:0+14-25:13+27-38:26+40-51:39"
-	mck_max_cpus=`expr $mck_max_cpus - 3`
-elif [ $max_core -eq 15 ]; then
-	host_core="0-3"
-	mck_core="4-15"
-	ikc_map="4,8,12:0+5,9,13:1+6,10,14:2+7,11,15:3"
-	mck_max_cpus=`expr $mck_max_cpus - 3`
+if [ "$linux_run" == "yes" ]; then
+host_core=""
+ikc_map=""
+else
+if [ $max_core -eq 56 ]; then
+	host_core="0,14,28,42"
+	ikc_map="1-13:0+15-27:14+29-41:28+43-55:42"
+elif [ $max_core -eq 48 ]; then
+	host_core="0,12,24,36"
+	ikc_map="1-11:0+13-23:12+25-35:24+37-47:36"
+elif [ $max_core -eq 16 ]; then
+	host_core="0,8"
+	ikc_map="1-7:0+9-15:8"
 else
 	host_core=$min_core
-	mck_core="1-${max_core}"
-	ikc_map="1-${max_core}:0"
+	ikc_map="1-${max_core}:$min_core"
 fi
 fi
+
+host_core_num=`echo $host_core | perl -ne 'if ($_ == "") { print 0; } else { @cpus = split /,/; print $#cpus + 1; }'`
+mck_max_cpus=`cat /proc/cpuinfo | grep -c "processor"`
+mck_max_cpus=`expr $mck_max_cpus - $host_core_num`
 
 # get mck ap num
 mck_ap_num=`expr $mck_max_cpus - 1`

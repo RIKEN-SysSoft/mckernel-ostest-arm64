@@ -124,6 +124,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s rt_sigsuspend -n 0
 
 	echo "## cpu_thread_limits ##"
+	# Spawning as many threads as cpus after setting RLIMIT_NPROC to 0
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_thread_limits -n 0 -- -t $mck_ap_num
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_thread_limits -n 1 -- -t $mck_ap_num
 
