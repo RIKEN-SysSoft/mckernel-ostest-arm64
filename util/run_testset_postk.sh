@@ -15,6 +15,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 	${mcexec} $execve_comm "${app_dir}/lv07-st" $execve_arg_end $ostype_name
 	${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name
 
+	echo "## lv07_loop ##"
 	count=1
 	${DRYRUN} touch ${lv07_tmp_before}
 	while [ $count -le $mck_max_cpus ]
