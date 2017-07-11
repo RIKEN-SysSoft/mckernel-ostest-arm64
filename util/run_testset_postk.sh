@@ -19,12 +19,14 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 	${DRYRUN} touch ${lv07_tmp_before}
 	while [ $count -le $mck_max_cpus ]
 	do
-		${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $count ${DRYRUN_QUOTE}| tee ${lv07_tmp}${DRYRUN_QUOTE}
 		if [ "$DRYRUN" != ":" ]; then
+		${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $count | tee ${lv07_tmp}
 		work_str=`cat ${lv07_tmp}`
 		echo ${work_str} | grep -o ".:${ostype_str}" | sort > ${lv07_tmp}
 		diff ${lv07_tmp_before} ${lv07_tmp}
 		mv ${lv07_tmp} ${lv07_tmp_before}
+		else
+		echo '${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $count | tee ${lv07_tmp}'
 		fi
 		count=`expr $count + 1`
 	done
@@ -103,7 +105,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 	#### test_mck case ####
 	echo "## siginfo ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 0
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 1 ${DRYRUN_QUOTE}&${DRYRUN_QUOTE}
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s siginfo -n 1 & $DRYRUN_WAIT
 	if [ "$DRYRUN" != ":" ]; then
 	sleep 3
 	siginfo_send_signal `$pidof_mcexec`
@@ -154,7 +156,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 3 ]; then
 		echo "## mem_stack_limits ##"
 	fi
 	${DRYRUN} echo "MCKERNEL_RLIMIT_STACK=mckernel_max_memory_size x 110%"
-	${mcexec} -s ${DRYRUN_QUOTE}${mck_max_mem_size_110p},${mck_max_mem_size_110p}${DRYRUN_QUOTE} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_95p
+	${mcexec} -s ${mck_max_mem_size_110p},${mck_max_mem_size_110p} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_95p
 fi # RT_BLOCK 3 end
 
 # RT_BLOCK 4 start
@@ -162,7 +164,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 4 ]; then
 	if [ $sep_run_num -eq 4 ]; then
 		echo "## mem_stack_limits ##"
 		${DRYRUN} echo "MCKERNEL_RLIMIT_STACK=mckernel_max_memory_size x 110%"
-		${mcexec} -s ${DRYRUN_QUOTE}${mck_max_mem_size_110p},${mck_max_mem_size_110p}${DRYRUN_QUOTE} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
+		${mcexec} -s ${mck_max_mem_size_110p},${mck_max_mem_size_110p} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
 	else
 		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
 	fi
@@ -481,7 +483,6 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 #SKIP	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setaffinity -n 11 -- -p $mck_max_cpus
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setaffinity -n 12 -- -p $mck_max_cpus
 
-	getaff_cpus=`expr $mck_max_cpus + 5`
 	echo "## sched_getaffinity ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 0 -- -p $mck_max_cpus
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 1
@@ -716,12 +717,14 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s fpregs -n 4
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s fpregs -n 5 -- -p $mck_max_cpus
 
+	if ["$linux_run" == "no" ];  then
 	echo "## binfmt ##"
-	binfmt_prefix_comm=
-	if [ "${execve_comm}" != "" ]; then
-		binfmt_prefix_comm="$execve_comm"
+	if [ "$DRYRUN" != ":" ]; then
+	MCEXEC_WL=$(cd ${app_dir}; pwd -P) $binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0
+	else
+		echo 'MCEXEC_WL=$(cd ${app_dir}; pwd -P) $binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0'
+
 	fi
-	MCEXEC_WL=${DRYRUN_QUOTE}$(cd ${app_dir}; pwd -P)${DRYRUN_QUOTE} $binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0
 
 	echo "## time_sharing ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s time_sharing -n 0
@@ -845,8 +848,8 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 
 	if [ "$linux_run" == "no" ]; then
 	echo "## freeze_thaw ##"
-	echo "## freeze_thaw test#0 (a.out -> freeze -> thaw) ##"
-	${mcexec} $execve_comm "${app_dir}/single_node" &
+	## freeze_thaw test#0 (a.out -> freeze -> thaw) ##
+	${mcexec} $execve_comm "${app_dir}/single_node" & $DRYRUN_WAIT
 	if [ "$DRYRUN" != ":" ]; then
 	sleep 1
 
@@ -859,50 +862,58 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	"${app_dir}/freeze_thaw" 0 thaw
 	wait `$pidof_mcexec`
 	fi
+	fi
 
-#SKIP	echo "## freeze_thaw test#1 (freeze -> a.out -> thaw) ##"
-#SKIP	"${app_dir}/freeze_thaw" 0 freeze
-#SKIP	${mcexec} $execve_comm "${app_dir}/glibc_hello_world" &
-#SKIP	for i in `seq 1 3`
-#SKIP	do
-#SKIP		sleep 1
-#SKIP		echo "sleep ${i} second elapsed."
-#SKIP	done
-#SKIP	"${app_dir}/freeze_thaw" 0 thaw
-#SKIP	wait `$pidof_mcexec`
+	if false; then # invalid test
+	echo "## freeze_thaw test#1 (freeze -> a.out -> thaw) ##"
+	"${app_dir}/freeze_thaw" 0 freeze
+	${mcexec} $execve_comm "${app_dir}/glibc_hello_world" &
+	for i in `seq 1 3`
+	do
+		sleep 1
+		echo "sleep ${i} second elapsed."
+	done
+	"${app_dir}/freeze_thaw" 0 thaw
+	wait `$pidof_mcexec`
+	fi
 
-#SKIP	echo "## freeze_thaw test#2 (freeze -> a.out -> kill a.out -> thaw) ##"
-#SKIP	"${app_dir}/freeze_thaw" 0 freeze
-#SKIP	${mcexec} $execve_comm "${app_dir}/glibc_hello_world" &
-#SKIP	kill `$pidof_mcexec`
-#SKIP	"${app_dir}/freeze_thaw" 0 thaw
-#SKIP	${mcexec} $execve_comm "${app_dir}/glibc_hello_world"
+	if false; then # invalid test
+	echo "## freeze_thaw test#2 (freeze -> a.out -> kill a.out -> thaw) ##"
+	"${app_dir}/freeze_thaw" 0 freeze
+	${mcexec} $execve_comm "${app_dir}/glibc_hello_world" &
+	kill `$pidof_mcexec`
+	"${app_dir}/freeze_thaw" 0 thaw
+	${mcexec} $execve_comm "${app_dir}/glibc_hello_world"
+	fi
 
+	if [ "$linux_run" == "no" ]; then
 	echo "## cpu_pa_info ##"
-	echo "## cpu_pa_info test#0 ##"
+	## cpu_pa_info test#0 ##
 	"${app_dir}/cpu_pa_info" 0 0
 
-#REPEAL	echo "## cpu_pa_info test#1 ##"
+	## cpu_pa_info test#1 ##
 #	"${app_dir}/cpu_pa_info" 0 1
 
-	echo "## cpu_pa_info test#2 ##"
+	## cpu_pa_info test#2 ##
 	"${app_dir}/cpu_pa_info" 0 2
 
-	echo "## cpu_pa_info test#3 ##"
+	## cpu_pa_info test#3 ##
 	"${app_dir}/cpu_pa_info" 0 3
 
-	echo "## cpu_pa_info test#4 ##"
+	## cpu_pa_info test#4 ##
 	"${app_dir}/cpu_pa_info" 0 4
 
-	echo "## cpu_pa_info test#5 ##"
+	## cpu_pa_info test#5 ##
 	"${app_dir}/cpu_pa_info" 0 5
+	fi
 
+	if [ "$linux_run" == "no" ]; then
 	echo "## get_rusage ##"
-	echo "## get_rusage test#0 (no user process) ##"
+	## get_rusage test#0 (no user process) ##
 	"${app_dir}/get_rusage" 0
 
-	echo "## get_rusage test#1 (user multi thread process rinning) ##"
-	${mcexec} $execve_comm "${app_dir}/single_node" &
+	## get_rusage test#1 (user multi thread process rinning) ##
+	${mcexec} $execve_comm "${app_dir}/single_node" & $DRYRUN_WAIT
 	if [ "$DRYRUN" != ":" ]; then
 	sleep 1
 	"${app_dir}/get_rusage" 0
@@ -919,7 +930,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 fi # RT_BLOCK 10 end
 
 	echo "## force_exit ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s force_exit -n 0 -- -f $mmapfile_name -d /dev/test_mck/mmap_dev &
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s force_exit -n 0 -- -f $mmapfile_name -d /dev/test_mck/mmap_dev & $DRYRUN_WAIT
 	if [ "$DRYRUN" != ":" ]; then
 	sleep 3
 	echo "send SIGKILL for mcexec."

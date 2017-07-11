@@ -71,6 +71,7 @@ usage()
 # option check
 execve_comm=
 execve_arg_end=
+binfmt_prefix_comm=
 mck_max_mem_size=
 mck_max_node_mem_size=
 boot_numa_opt=""
@@ -78,7 +79,7 @@ sep_run_num=0
 linux_run="no"
 pidof_mcexec="pidof mcexec"
 DRYRUN=
-DRYRUN_QUOTE=
+DRYRUN_WAIT=
 while getopts Hep:s:dh OPT
 do
   case $OPT in
@@ -91,6 +92,7 @@ do
     e)
       execve_comm="${app_dir}/test_mck -s execve -n 1 -- -f"
       execve_arg_end="--"
+      binfmt_prefix_comm="$execve_comm"
       ;;
     p)
       boot_numa_opt="-p $OPTARG"
@@ -106,8 +108,8 @@ do
       # Don't show commands surrounding mcexec and
       # supress thier side-effects
       DRYRUN=":"
-      DRYRUN_QUOTE="'"
-      mcexec='echo ${mcexec} '
+      DRYRUN_WAIT="wait"
+      mcexec='printf %s ${mcexec} '
       trap ":" USR1
 
       # Switch kill target

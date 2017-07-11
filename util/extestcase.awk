@@ -48,7 +48,8 @@ BEGIN {
     printf("\necho \"## %s ##\"\n\n", testname) >> testscript;
     printf("testcase=%s.%03d\n", testname, count) >> testscript;
     printf("testno=%d\n", count) >> testscript;
-    if (testname == "siginfo" && count == 1) {
+    if ((testname == "siginfo" && count == 1) ||
+	(testname == "force_exit" && count == 0)) {
 	printf("%s > %s &\n", $0, outputfile)  >> testscript;
     } else {
 	printf("%s > %s\n", $0, outputfile)  >> testscript;
