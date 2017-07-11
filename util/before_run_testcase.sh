@@ -239,6 +239,7 @@ fi
 	sh $run_mck_sh -a $host_core $boot_numa_opt -v -r $ikc_map
 	fi
 
+	if [ "$DRYRUN" != ":" ]; then
 	if [ "$linux_run" == "no" ]; then
 	#### get McKernel memory size ####
 	echo "get McKernel memory size."
@@ -277,6 +278,7 @@ fi
 		done
 		echo "mck_max_mem_size     :$mck_max_mem_size"
 		echo "mck_max_node_mem_size:$mck_max_node_mem_size"
+	fi
 	fi
 
 	#### insmod test driver ####
