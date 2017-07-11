@@ -3,6 +3,14 @@
 
 source ./before_run_testcase.sh
 
+# Taken care of by before_*.sh in individual run
+echo a > $mmapfile_name
+dd if=/dev/zero of=${temp} bs=1M count=10
+ln -s ${temp} ${link}
+
+echo $ostype_str > $ostype_name
+cat $org_pid_max > $pid_max_name
+
 # RT_BLOCK 1 start
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 	#### other than test_mck tp case ####
@@ -949,6 +957,15 @@ fi # RT_BLOCK 10 end
 	fi
 
 	source ./after_run_testcase.sh
+
+	if [ "$DRYRUN" != ":" ]; then
+	# Taken care of by after_*.sh in individual run
+	rm -f $ostype_name
+	rm -f $pid_max_name
+	rm -f $link
+	rm -f $temp
+	rm -f $mmapfile_name
+	fi
 
 #	if [ -e ${sh_base}/continue_end ]; then
 #		echo "find continue_end file."

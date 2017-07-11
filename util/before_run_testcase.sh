@@ -217,13 +217,6 @@ fi
 	fi
 	echo "use uid:$uid gid:$gid"
 
-	echo a > $mmapfile_name
-	dd if=/dev/zero of=${temp} bs=1M count=10
-	ln -s ${temp} ${link}
-
-	echo $ostype_str > $ostype_name
-	cat $org_pid_max > $pid_max_name
-
 	#### console output setting ####
 	orig_printk_setting=`cat /proc/sys/kernel/printk`
 	echo "set 4 4 1 7 => /proc/sys/kernel/printk"
