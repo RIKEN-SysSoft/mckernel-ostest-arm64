@@ -13,12 +13,15 @@ BEGIN {
     "pwd -P" | getline cwd;
     testcasedir = sprintf("%s/%s", cwd, "testcase_linux"); 
     outputdir = sprintf("%s/%s", cwd, "output_linux");
+    workdir = sprintf("%s/%s", cwd, "work_linux");
     testlistfile = sprintf("%s/testlist_linux", cwd);
     system("rm -f " testlistfile);
     system("rm -rf " testcasedir);
     system("rm -rf " outputdir);
+    system("rm -rf " workdir);
     system("mkdir -p " testcasedir);
     system("mkdir -p " outputdir);
+    system("mkdir -p " workdir);
     testname = "#";
 }
 
@@ -50,14 +53,16 @@ BEGIN {
 !/^##/ {
     testscript = sprintf("%s/%s.%03d", testcasedir, testname, count);
     outputfile = sprintf("%s/%s.%03d", outputdir, testname, count);
+    system("mkdir -p " workdir "/" testname);
+    printf("cd " workdir "/" testname) >> testscript;
     print "#!/bin/sh"  > testscript;
     append_testscript("before_run_testcase.sh");
-    if (existScript) {
-	append_testscript("before_" testname ".sh");
-    }
     printf("\necho \"## %s ##\"\n\n", testname) >> testscript;
     printf("testcase=%s.%03d\n", testname, count) >> testscript;
     printf("testno=%d\n", count) >> testscript;
+    if (existScript) {
+	append_testscript("before_" testname ".sh");
+    }
     if ((testname == "siginfo" && count == 1) ||
 	(testname == "force_exit" && count == 0)) {
 	printf("%s > %s &\n", $0, outputfile)  >> testscript;

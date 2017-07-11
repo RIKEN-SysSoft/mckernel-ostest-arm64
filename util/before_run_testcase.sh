@@ -1,5 +1,20 @@
-this_dir="$(cd $(dirname $0); pwd)"
+
+# testlist.sh run /work/mcktest/data/script/ostest-getrusage.001 with
+# cwd of /work/mcktest/ostest/util and AUTOTEST_HOME defined, or
+# user run /work/mcktest/ostest/util/run_testset_postk.sh with
+# cwd of <ostest>/util and AUTOTEST_HOME undefined
+cwd=`pwd`
+if [ "x${AUTOTEST_HOME}" == "x" ]; then
+    this_dir="$(cd $(dirname $0); pwd)"
+else
+    this_dir=$cwd
+fi
+autotest_home=${$AUTOTEST_HOME:-$this_dir/../../}
+
 source "${this_dir}/config"
+
+$TEST_HOME=${TEST_HOME:-$app_dir} # run_rt_*.sh could define this
+export TEST_HOME
 
 # test file
 temp=$this_dir/tempfile
@@ -109,7 +124,7 @@ do
       # supress thier side-effects
       DRYRUN=":"
       DRYRUN_WAIT="wait"
-      mcexec='printf %s ${mcexec} '
+      mcexec='echo ${mcexec} '
       trap ":" USR1
 
       # Switch kill target
@@ -194,7 +209,6 @@ getaff_cpus=`expr $mck_max_cpus + 5`
 
 mck_ap_num=`expr $mck_max_cpus - 1`
 mck_ap_num_even=$mck_ap_num
-
 if [ `expr $mck_ap_num_even % 2` != 0 ]; then
   mck_ap_num_even=`expr $mck_ap_num_even - 1`
 fi
@@ -246,9 +260,9 @@ fi
 	echo "get McKernel memory size."
 	query_mem_str=`"$ihkosctl" 0 query mem`
 	mck_max_mem_size=`echo $query_mem_str | sed -e 's/@[0-9]*,/ + /g' | sed -e 's/@[0-9]*$//g' | xargs expr`
-	mck_max_mem_size_95p=`expr $mck_max_mem_size / 20`
-	mck_max_mem_size_110p=`expr $mck_max_mem_size_95p \* 22`
-	mck_max_mem_size_95p=`expr $mck_max_mem_size_95p \* 19`
+	mck_max_mem_size_5p=`expr $mck_max_mem_size / 20`
+	mck_max_mem_size_110p=`expr $mck_max_mem_size_5p \* 22`
+	mck_max_mem_size_95p=`expr $mck_max_mem_size_5p \* 19`
 
 	query_mem_sep_str=`echo $query_mem_str | sed -e 's/@[0-9]*,/,/g' | sed -e 's/@[0-9]*$//g'`
 	mck_max_node_mem_size=`echo $query_mem_sep_str | cut -d ',' -f 1`
@@ -265,9 +279,9 @@ fi
 		echo "get total usable RAM and the max among NUMA-nodes"
 		memtotals=`find /sys/devices/system/node/ -name meminfo | xargs -r grep MemTotal | awk '{ print $4 * 1024; }'`
 		mck_max_mem_size=`echo $memtotals | perl -ne 'foreach $memtotal (split) { $sum += $memtotal; } print $sum;'`
-		mck_max_mem_size_95p=`expr $mck_max_mem_size / 20`
-		mck_max_mem_size_110p=`expr $mck_max_mem_size_95p \* 22`
-		mck_max_mem_size_95p=`expr $mck_max_mem_size_95p \* 19`
+		mck_max_mem_size_5p=`expr $mck_max_mem_size / 20`
+		mck_max_mem_size_110p=`expr $mck_max_mem_size_5p \* 22`
+		mck_max_mem_size_95p=`expr $mck_max_mem_size_5p \* 19`
 	
 		mck_max_node_mem_size=-1
 		for i in $memtotals

@@ -55,7 +55,7 @@ app_base=${shell_dir}/../bin
 mck_dir=${mck_base}/smp-arm64/kernel
 ihk_dir=${mck_base}/kmod
 SBINDIR=${mck_base}/sbin
-app_dir=${app_base}
+app_dir=${app_base} # dir for executables
 
 mcos_dir=/tmp/mcos
 devices_dir=/sys/devices

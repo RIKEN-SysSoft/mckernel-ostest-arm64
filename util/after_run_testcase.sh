@@ -29,3 +29,5 @@
 		userdel $test_user_name
 	fi
 	fi
+
+cd $cwd
