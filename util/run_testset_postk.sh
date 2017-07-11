@@ -67,7 +67,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 	${mcexec} $execve_comm "${app_dir}/lv14" $execve_arg_end 1
 	${mcexec} $execve_comm "${app_dir}/lv14" $execve_arg_end 2
 
-	if [ $mck_max_mem_size -ge 1181116006 ]; then
+	if [ "$DRYRUN" == ":" ] || [ $mck_max_mem_size -ge 1181116006 ]; then
 		${mcexec} $execve_comm "${app_dir}/lv14" $execve_arg_end 3
 		${mcexec} $execve_comm "${app_dir}/lv14" $execve_arg_end 4
 		${mcexec} $execve_comm "${app_dir}/lv14" $execve_arg_end 5
@@ -141,7 +141,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 	echo "## mem_stack_limits ##"
 	${mcexec} -s 10485760,10485760 $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 9961472
 
-	if [ $mck_max_mem_size -ge 2244120412 ]; then
+	if [ "$DRYRUN" == ":" ] || [ $mck_max_mem_size -ge 2244120412 ]; then
 		${mcexec} -s 2147483648,2147483648 $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 2040109466
 	else
 		echo "## mem_stack_limits 2GiB SKIP ##"
@@ -359,7 +359,7 @@ fi # RT_BLOCK 7 end
 
 # RT_BLOCK 8 start
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
-	if [ $mck_max_node_mem_size -ge 2684354560 ]; then
+	if [ "$DRYRUN" == ":" ] || [ $mck_max_node_mem_size -ge 2684354560 ]; then
 		echo "## large_bss ##"
 		${mcexec} $execve_comm "${app_dir}/large_bss"
 	else

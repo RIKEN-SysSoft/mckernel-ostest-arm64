@@ -8,7 +8,6 @@ mmapfile_name=$this_dir/mmapfile
 ostype_name=$this_dir/ostype
 org_pid_max=/proc/sys/kernel/pid_max
 pid_max_name=$this_dir/pid_max
-cpuinfo_path=/proc/mcos0/cpuinfo
 lv07_tmp=$this_dir/lv07.txt
 lv07_tmp_before=$this_dir/lv07_before.txt
 
@@ -116,12 +115,16 @@ do
 
       # Evaluate variables with environment dependent values at run-time
       app_dir='${app_dir}'
+
       mck_max_cpus='${mck_max_cpus}'
+      getaff_cpus='${getaff_cpus}'
+      mck_ap_num='${mck_ap_num}'
+      mck_ap_num_even='${mck_ap_num_even}'
+
       mck_max_mem_size='${mck_max_mem_size}'
       mck_max_mem_size_95p='${mck_max_mem_size_95p}'
       mck_max_mem_size_110p='${mck_max_mem_size_110p}'
-      mck_ap_num='${mck_ap_num}'
-      mck_ap_num_even='${mck_ap_num_even}'
+
       gid='${gid}'
       uid='${uid}'
 
@@ -130,9 +133,10 @@ do
       link='${link}'
       mmapfile_name='${mmapfile_name}'
       ostype_name='${ostype_name}'
+
       org_pid_max='${org_pid_max}'
       pid_max_name='${pid_max_name}'
-      cpuinfo_path='${cpuinfo_path}'
+
       lv07_tmp='${lv07_tmp}'
       lv07_tmp_before='${lv07_tmp_before}'
       ;;
@@ -144,6 +148,8 @@ do
 done
 shift `expr $OPTIND - 1`
 
+# resolve number of CPUs
+if [ "$DRYRUN" != ":" ]; then
 max_core=0
 min_core=`cat /proc/cpuinfo | grep processor | cut -d ' ' -f 2 | head -1`
 lines=`cat /proc/cpuinfo | grep processor | cut -d ' ' -f 2`
@@ -160,7 +166,6 @@ done << END
 $lines
 END
 
-# check full configuration
 if [ "$linux_run" == "yes" ]; then
 host_core=""
 ikc_map=""
@@ -183,13 +188,14 @@ fi
 host_core_num=`echo $host_core | perl -ne 'if ($_ == "") { print 0; } else { @cpus = split /,/; print $#cpus + 1; }'`
 mck_max_cpus=`cat /proc/cpuinfo | grep -c "processor"`
 mck_max_cpus=`expr $mck_max_cpus - $host_core_num`
+getaff_cpus=`expr $mck_max_cpus + 5`
 
-# get mck ap num
 mck_ap_num=`expr $mck_max_cpus - 1`
 mck_ap_num_even=$mck_ap_num
 
 if [ `expr $mck_ap_num_even % 2` != 0 ]; then
   mck_ap_num_even=`expr $mck_ap_num_even - 1`
+fi
 fi
 
 # run regression
@@ -239,9 +245,9 @@ fi
 	sh $run_mck_sh -a $host_core $boot_numa_opt -v -r $ikc_map
 	fi
 
+	# resolve memory size
 	if [ "$DRYRUN" != ":" ]; then
 	if [ "$linux_run" == "no" ]; then
-	#### get McKernel memory size ####
 	echo "get McKernel memory size."
 	query_mem_str=`"$ihkosctl" 0 query mem`
 	mck_max_mem_size=`echo $query_mem_str | sed -e 's/@[0-9]*,/ + /g' | sed -e 's/@[0-9]*$//g' | xargs expr`
@@ -261,7 +267,6 @@ fi
 	echo "mck_max_mem_size     :$mck_max_mem_size"
 	echo "mck_max_node_mem_size:$mck_max_node_mem_size"
 	else
-		#### get Linux memory size ####
 		echo "get total usable RAM and the max among NUMA-nodes"
 		memtotals=`find /sys/devices/system/node/ -name meminfo | xargs -r grep MemTotal | awk '{ print $4 * 1024; }'`
 		mck_max_mem_size=`echo $memtotals | perl -ne 'foreach $memtotal (split) { $sum += $memtotal; } print $sum;'`
