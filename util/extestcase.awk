@@ -53,8 +53,11 @@ BEGIN {
 !/^##/ {
     testscript = sprintf("%s/%s.%03d", testcasedir, testname, count);
     outputfile = sprintf("%s/%s.%03d", outputdir, testname, count);
-    system("mkdir -p " workdir "/" testname);
-    printf("cd " workdir "/" testname) >> testscript;
+
+    workdir2 = sprintf("%s/%s.%03d", workdir, testname, count);
+    system("mkdir -p " workdir2);
+    printf("cd " workdir2 "\n") >> testscript;
+
     print "#!/bin/sh"  > testscript;
     append_testscript("before_run_testcase.sh");
     printf("\necho \"## %s ##\"\n\n", testname) >> testscript;
