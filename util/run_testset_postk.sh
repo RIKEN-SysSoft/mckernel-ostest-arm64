@@ -35,7 +35,9 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 		diff ${lv07_tmp_before} ${lv07_tmp}
 		mv ${lv07_tmp} ${lv07_tmp_before}
 		else
-		echo '${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $count | tee ${lv07_tmp}'
+			printf '${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name '
+			printf $count
+			echo '| tee ${lv07_tmp}'
 		fi
 		count=`expr $count + 1`
 	done
@@ -43,7 +45,11 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 	count=0
 
 	echo "## lv09 ##"
+	if [ "$DRYRUN" != ":" ]; then
 	${mcexec} $execve_comm "${app_dir}/lv09-pgf" $execve_arg_end w $temp aaabbbcccdddeeefffggghhh\\n
+	else
+		echo '${mcexec} $execve_comm "${app_dir}/lv09-pgf" $execve_arg_end w $temp aaabbbcccdddeeefffggghhh\\n'
+	fi
 	${mcexec} $execve_comm "${app_dir}/lv09-pgf" $execve_arg_end r $temp
 
 	echo "## lv11 ##"
@@ -732,7 +738,6 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	MCEXEC_WL=$(cd ${app_dir}; pwd -P) $binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0
 	else
 		echo 'MCEXEC_WL=$(cd ${app_dir}; pwd -P) $binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0'
-
 	fi
 
 	echo "## time_sharing ##"

@@ -133,6 +133,10 @@ do
       # Evaluate variables with environment dependent values at run-time
       app_dir='${app_dir}'
 
+      execve_comm='${execve_comm}'
+      execve_arg_end='${execve_arg_end}'
+      binfmt_prefix_comm='${binfmt_prefix_comm}'
+
       mck_max_cpus='${mck_max_cpus}'
       getaff_cpus='${getaff_cpus}'
       mck_ap_num='${mck_ap_num}'
@@ -300,3 +304,4 @@ fi
 	echo "insmod test_drv"
 	sh "$insmod_test_drv_sh"
 	fi
+rc=0
