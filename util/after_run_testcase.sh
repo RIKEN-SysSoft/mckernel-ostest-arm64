@@ -30,6 +30,6 @@
 	fi
 	fi
 
-cd $cwd
+cd $ostest_util_dir
 
 exit $rc

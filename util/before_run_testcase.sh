@@ -1,30 +1,20 @@
+ulimit -S -c unlimited
 
-# testlist.sh run /work/mcktest/data/script/ostest-getrusage.001 with
-# cwd of /work/mcktest/ostest/util and AUTOTEST_HOME defined, or
-# user run /work/mcktest/ostest/util/run_testset_postk.sh with
-# cwd of <ostest>/util and AUTOTEST_HOME undefined
-cwd=`pwd`
-if [ "x${AUTOTEST_HOME}" == "x" ]; then
-    this_dir="$(cd $(dirname $0); pwd)"
-else
-    this_dir=$cwd
-fi
-autotest_home=${$AUTOTEST_HOME:-$this_dir/../../}
-
-source "${this_dir}/config"
+source ./config
 
 $TEST_HOME=${TEST_HOME:-$app_dir} # run_rt_*.sh could define this
 export TEST_HOME
 
 # test file
-temp=$this_dir/tempfile
+ostest_util_dir=`pwd`
+temp=${ostest_util_dir}/tempfile
 link=/tmp/templink
-mmapfile_name=$this_dir/mmapfile
-ostype_name=$this_dir/ostype
+mmapfile_name=${ostest_util_dir}/mmapfile
+ostype_name=${ostest_util_dir}/ostype
 org_pid_max=/proc/sys/kernel/pid_max
-pid_max_name=$this_dir/pid_max
-lv07_tmp=$this_dir/lv07.txt
-lv07_tmp_before=$this_dir/lv07_before.txt
+pid_max_name=${ostest_util_dir}/pid_max
+lv07_tmp=${ostest_util_dir}/lv07.txt
+lv07_tmp_before=${ostest_util_dir}/lv07_before.txt
 
 # ostype string
 ostype_str="Linux"
@@ -149,7 +139,6 @@ do
       gid='${gid}'
       uid='${uid}'
 
-      this_dir='${this_dir}'
       temp='${temp}'
       link='${link}'
       mmapfile_name='${mmapfile_name}'
