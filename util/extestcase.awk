@@ -53,8 +53,8 @@ BEGIN {
 
 !/^##/ {
     testscript = sprintf("%s/%s.%03d", testcasedir, testname, count);
-    outputfile = sprintf("%s/%s.%03d.output", outputdir, testname, count);
-    workdir2 = sprintf("%s/%s.%03d", workdir, testname, count);
+    outputfile = sprintf("%s/ostest-%s.%03d.output", outputdir, testname, count);
+    workdir2 = sprintf("%s/ostest-%s.%03d", workdir, testname, count);
     system("mkdir -p " workdir2);
     printf("cd " workdir2 "\n") >> testscript;
 
