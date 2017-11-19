@@ -1,6 +1,6 @@
-ulimit -S -c unlimited
-
 source ./config
+
+ulimit -S -c unlimited
 
 $TEST_HOME=${TEST_HOME:-$app_dir} # run_rt_*.sh could define this
 export TEST_HOME
