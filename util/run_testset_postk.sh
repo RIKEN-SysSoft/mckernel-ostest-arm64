@@ -349,11 +349,17 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s remap_file_pages -n 0 -- -s $((256*1024*1024))
 
 	echo "## mem_limits ##"
+	if [ "X$runHOST" = Xyes ]; then
+		swapoff -a
+	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f mmap -s $((1024*1024)) -c 1
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f mmap -s $mck_max_mem_size_95p -c 1
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f mmap -s $mck_max_mem_size -c 1
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f mmap -S mmap -c 1
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f brk -s $((1024*1024)) -c 1
+	if [ "X$runHOST" = Xyes ]; then
+		swapon -a
+	fi
 fi # RT_BLOCK 5 end
 
 # RT_BLOCK 6 start
@@ -362,7 +368,13 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 6 ]; then
 		echo "## mem_limits ##"
 	fi
 
+	if [ "X$runHOST" = Xyes ]; then
+		swapoff -a
+	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f brk -s $mck_max_mem_size_95p -c 1
+	if [ "X$runHOST" = Xyes ]; then
+		swapon -a
+	fi
 fi # RT_BLOCK 6 end
 
 # RT_BLOCK 7 start
@@ -371,14 +383,26 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 7 ]; then
 		echo "## mem_limits ##"
 	fi
 
+	if [ "X$runHOST" = Xyes ]; then
+		swapoff -a
+	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f brk -s $mck_max_mem_size -c 1
+	if [ "X$runHOST" = Xyes ]; then
+		swapon -a
+	fi
 fi # RT_BLOCK 7 end
 
 # RT_BLOCK 8 start
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	if [ "$DRYRUN" == ":" ] || [ $mck_max_node_mem_size -ge 2684354560 ]; then
 		echo "## large_bss ##"
+		if [ "X$runHOST" = Xyes ]; then
+			swapoff -a
+		fi
 		${mcexec} $execve_comm "${app_dir}/large_bss"
+		if [ "X$runHOST" = Xyes ]; then
+			swapon -a
+		fi
 	else
 		echo "## large_bss SKIP ##"
 	fi
