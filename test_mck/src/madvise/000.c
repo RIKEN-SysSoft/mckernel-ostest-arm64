@@ -16,14 +16,16 @@ static const struct madvise000_param {
 	{ MADV_REMOVE,		TEST_MADV_FAILUER, 	EACCES},/* 5 */
 	{ MADV_DONTFORK,	TEST_MADV_SUCCESS, 	0},	/* 6 */
 	{ MADV_DOFORK,		TEST_MADV_SUCCESS, 	0},	/* 7 */
-	{ MADV_DODUMP,		TEST_MADV_FAILUER, 	EINVAL},/* 8 */
-	{ MADV_DONTDUMP,	TEST_MADV_FAILUER, 	EINVAL},/* 9 */
+	{ MADV_DODUMP,		TEST_MADV_SUCCESS, 	0},	/* 8 */
+	{ MADV_DONTDUMP,	TEST_MADV_SUCCESS, 	0},	/* 9 */
 	{ MADV_MERGEABLE,	TEST_MADV_FAILUER, 	EINVAL},/* 10 */
 	{ MADV_UNMERGEABLE,	TEST_MADV_FAILUER, 	EINVAL},/* 11 */
 	{ MADV_HUGEPAGE,	TEST_MADV_FAILUER, 	EINVAL},/* 12 */
 	{ MADV_NOHUGEPAGE,	TEST_MADV_FAILUER, 	EINVAL},/* 13 */
 	{ MADV_HWPOISON,	TEST_MADV_FAILUER, 	EPERM},	/* 14 */
+#ifdef MADV_SOFT_OFFLINE
 	{ MADV_SOFT_OFFLINE,	TEST_MADV_FAILUER, 	EPERM},	/* 15 */
+#endif
 	{ -1, -1 ,-1},                                        	/* 16 */
 	{ -1, -1 ,-1},                                        	/* 17 */
 };
