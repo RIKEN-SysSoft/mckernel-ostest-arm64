@@ -1,0 +1,22 @@
+# madvise19.inf COPYRIGHT FUJITSU LIMITED 2018
+# disable the "Type <return> to continue, or q <return> to quit"  
+set height 0
+
+######################################################
+
+# show page1
+p/x page1
+
+# show page2
+p/x page2
+
+# show page3
+p/x page3
+
+######################################################
+
+# disable logging
+set logging off
+
+# exit gdb
+quit

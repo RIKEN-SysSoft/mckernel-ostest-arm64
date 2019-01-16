@@ -1,0 +1,698 @@
+#!/bin/sh
+# config COPYRIGHT FUJITSU LIMITED 2015-2018
+
+KiB=1024
+MiB=$(($KiB * 1024))
+page_size=`getconf PAGE_SIZE`
+if [ -z "$page_size" ]; then
+	page_size=4096
+fi
+
+#
+# options value
+#
+dry_run=0
+INTERVAL=1
+LOGMODE=0
+facility="LOG_LOCAL6"
+chown_option=`logname 2> /dev/null`
+preset_num=0
+
+#
+# shells
+#
+shell_dir="$(cd $(dirname $0); pwd)"
+
+run_mck_sh=$shell_dir/run_mck.sh
+run_app_sh=$shell_dir/run_app.sh
+reboot_mck_sh=$shell_dir/reboot_mck.sh
+shutdown_mck_sh=$shell_dir/stop_mck.sh
+
+insmod_test_drv_sh=$shell_dir/insmod_test_drv.sh
+rmmod_test_drv_sh=$shell_dir/rmmod_test_drv.sh
+
+run_rt_sh=$shell_dir/run_rt.sh
+kmsgcat_sh=$shell_dir/kmsgcat.sh
+
+gdb_all_test_sh=$shell_dir/gdb_all_test.sh
+gdb_all_test_host_sh=$shell_dir/gdb_all_test_host.sh
+gdb_mcexec_sh=$shell_dir/gdb_mcexec.sh
+gdb_host_sh=$shell_dir/gdb_host.sh
+gdb_test_case_list=$shell_dir/gdb_test_case.list
+
+#
+# directory
+#
+
+. ${HOME}/.mck_test_config
+
+mck_base=${MCK_DIR}
+app_base=${shell_dir}/../bin
+mck_dir=${mck_base}/smp-arm64/kernel
+ihk_dir=${mck_base}/kmod
+SBINDIR=${mck_base}/sbin
+app_dir=${app_base}
+
+mcos_dir=/tmp/mcos
+devices_dir=/sys/devices
+mcos0_sys_dir=$mcos_dir/mcos0_sys
+mcos0_sys_upper=$mcos_dir/mcos0_sys_upper
+mcos0_sys_work=$mcos_dir/mcos0_sys_work
+find_path="find"
+mnt_find="/mnt/ext/bin/find"
+virtual_mcos0_dir=$devices_dir/virtual/mcos/mcos0
+virtual_sys_dir=$virtual_mcos0_dir/sys
+cpu_dir=$devices_dir/system/cpu
+cpu_devices_dir=/sys/bus/cpu/devices
+
+gdb_dir=/mnt/CentOS-aarch64.img/4/root/work/inst
+
+#
+# file
+#
+mck_build_info=$mck_base/build-info
+mck_img=$mck_dir/mckernel.img
+#mcexec=`find "$mck_base/" -name mcexec | sort -r | head -n 1`
+mcexec=${mck_base}/bin/mcexec
+eclair=${mck_base}/bin/eclair
+mcctrl_ko=$ihk_dir/mcctrl.ko
+ihk_ko=$ihk_dir/ihk.ko
+ihk_smp_ko=$ihk_dir/ihk-smp-arm64.ko
+mcoverlay_ko=$ihk_dir/mcoverlay.ko
+#ihkconfig=`find "$mck_base/" -name ihkconfig | sort -r | head -n 1`
+#ihkosctl=`find "$mck_base/" -name ihkosctl | sort -r | head -n 1`
+ihkconfig=${SBINDIR}/ihkconfig
+ihkosctl=${SBINDIR}/ihkosctl
+
+test_mck_ko_name=test_mck
+test_mck_ko=$app_dir/${test_mck_ko_name}.ko
+
+test_mck_proc_dir=/proc/test_mck
+test_mck_proc_devno=/proc/test_mck/devno
+test_mck_proc_tp_names=/proc/test_mck/tp_names
+
+test_mck_device_dir=/dev/test_mck
+
+mck_util_ko=$app_dir/mck_util.ko
+
+smp_resource_info=$shell_dir/smp_resource.info
+mcos_info=$shell_dir/mcos.info
+
+mounts=/proc/mounts
+mcos0_proc=$mcos_dir/mcos0_proc
+mcos0_proc_upper=$mcos_dir/mcos0_proc_upper
+mcos0_proc_work=$mcos_dir/mcos0_proc_work
+linux_proc=$mcos_dir/linux_proc
+
+gdb=$gdb_dir/bin/gdb
+
+default_vl_procfs=/proc/sys/abi/sve_default_vector_length
+
+##va_base_def=0x80000000
+
+##pa_base_def=0x20000000
+
+#
+# functions
+#
+mkdev()
+{
+  local path=$1
+  local type=$2
+  local maj=$3
+  local min=$4
+
+  if [ -e "$path" ]; then
+	  echo "error: exist device file($path)"
+	  return 1
+  fi
+
+  local dir=`dirname "$path"`
+  if [ ! -e "$dir" ]; then
+	  mkdir -p "$dir"
+  fi
+  mknod "$path" "$type" "$maj" "$min"
+}
+
+mkcdev()
+{
+  local path=$1
+  local maj=$2
+  local min=$3
+  mkdev "$path" c "$maj" "$min"
+}
+
+create_cdev_files()
+{
+  local E=:
+  local dir=$1
+  local name=$2
+
+  local maj_num=`cat /proc/devices | grep ${name} | sed "s|[ ]*\([0-9]*\) .*|\1|g"`
+  for maj in $maj_num
+  do
+	  local min_num=`ls -d /sys/dev/char/${maj}:* 2>/dev/null | sed "s|/sys/dev/char/${maj}:||g"`
+	  $E $maj:min=$min_num
+	  for min in $min_num
+	  do
+		  local devname=`cat /sys/dev/char/${maj}:${min}/uevent | grep 'DEVNAME='`
+		  $E $maj:$min:devname=$devname
+
+		  echo "$devname" | grep -qE "DEVNAME=$name[0-9]*"
+		  if [ $? -eq 0 ]; then
+			  local devfilename=`echo $devname | sed 's|DEVNAME=||g'`
+			  mkcdev "$dir/$devfilename" "$maj" "$min"
+		  fi
+	  done
+  done
+}
+
+# セクションのアドレスと長さを返します。
+#  usage: textセクションをリードする
+#   read_section_addr "${a_out}" .text
+#   echo .text=[$section_addr, $section_size]
+section_addr=
+section_size=
+read_section_addr()
+{
+	local a_out=$1
+	local name=$2
+
+	section_addr=
+	section_size=
+	if [ ! -f "$a_out" ]; then
+		return 1
+	fi
+
+	info=`readelf -S "$a_out" | grep -w -A1 "$name"`
+	if [ $? -ne 0 -o -z "$info" ]; then
+		return 1
+	fi
+	section_addr=`echo "$info" | sed 's/\[[ 0-9]*\]//g' | awk 'NR==1{sub(/^0*/, "0x", $3); print $3}'`
+	section_size=`echo "$info" | awk 'NR==2{sub(/^0*/, "0x", $1); print $1}'`
+	return 0
+}
+
+reserve()
+{
+	local num_cpu="$1"
+	local mem_string="${2}M"
+	local max_node=`cat /sys/devices/system/node/online | cut -d \- -f2`
+
+	if [ $dry_run -eq 1 ]; then
+		E=echo
+	else
+		E=
+	fi
+
+	if [ $preset_num -ne 0 ]; then
+		if [ $max_node -eq 3 ]; then
+			case $preset_num in
+				1) echo "use NUMA-preset $preset_num memory: 512 MiB, numa: 4 separation"
+				   mem_string="512M@0,512M@1,512M@2,512M@3"
+				   ;;
+				2) echo "use NUMA-preset $preset_num memory:   1 GiB, numa: 4 separation"
+				   mem_string="1024M@0,1024M@1,1024M@2,1024M@3"
+				   ;;
+				3) echo "use NUMA-preset $preset_num memory:   2 GiB, numa: 4 separation"
+				   mem_string="2048M@0,2048M@1,2048M@2,2048M@3"
+				   ;;
+				4) echo "use NUMA-preset $preset_num memory:   3 GiB, numa: 4 separation"
+				   mem_string="3072M@0,3072M@1,3072M@2,3072M@3"
+				   ;;
+				5) echo "use NUMA-preset $preset_num memory:   4 GiB, numa: 4 separation"
+				   mem_string="4096M@0,4096M@1,4096M@2,4096M@3"
+				   ;;
+			esac
+		elif [ $max_node -eq 7 ]; then
+			case $preset_num in
+				1) echo "use NUMA-preset $preset_num memory: 512 MiB, numa: 4 separation"
+				   mem_string="512M@4,512M@5,512M@6,512M@7"
+				   ;;
+				2) echo "use NUMA-preset $preset_num memory:   1 GiB, numa: 4 separation"
+				   mem_string="1024M@4,1024M@5,1024M@6,1024M@7"
+				   ;;
+				3) echo "use NUMA-preset $preset_num memory:   2 GiB, numa: 4 separation"
+				   mem_string="2048M@4,2048M@5,2048M@6,2048M@7"
+				   ;;
+				4) echo "use NUMA-preset $preset_num memory:   3 GiB, numa: 4 separation"
+				   mem_string="3072M@4,3072M@5,3072M@6,3072M@7"
+				   ;;
+				5) echo "use NUMA-preset $preset_num memory:   4 GiB, numa: 4 separation"
+				   mem_string="4096M@4,4096M@5,4096M@6,4096M@7"
+				   ;;
+			esac
+		else
+			echo -e "max_node=${max_node} unsupported, reserve memory size using ${mem_string}.\n"
+		fi
+	fi
+
+	#
+	# Remove mcoverlay if loaded
+	#
+	if grep mcoverlay /proc/modules &>/dev/null; then
+		if [ -n "$( cat "$mounts" | grep "$mcos0_sys_dir" )" ]; then
+			$E umount -l "$mcos0_sys_dir"
+		fi
+		if [ -n "$( cat "$mounts" | grep "$mcos0_proc" )" ]; then
+			$E umount -l "$mcos0_proc"
+		fi
+		if [ -n "$( cat "$mounts" | grep "$linux_proc" )" ]; then
+			$E umount -l "$linux_proc"
+		fi
+		if [ -n "$( cat "$mounts" | grep "$mcos_dir" )" ]; then
+			$E umount -l "$mcos_dir";
+		fi
+		if [ -e "$mcos_dir" ]; then
+			$E rm -rf "$mcos_dir";
+		fi
+		$E rmmod mcoverlay 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "error: removing mcoverlay" >&2
+			exit 1
+		fi
+	fi
+
+	# Start mcklogd. Note that McKernel blocks when kmsg buffer is full
+	# with '-k 1' until mcklogd unblocks it so starting mcklogd must preceeds
+	# booting McKernel
+	if [ ${LOGMODE} -ne 0 ]; then
+		# Stop mcklogd which has survived McKernel shutdown because mcstop+release.sh is not used
+		$E pkill mcklogd
+		$E env SBINDIR=${SBINDIR} ${SBINDIR}/mcklogd -i ${INTERVAL} -f ${facility}
+	fi
+
+	#
+	# load modules
+	#
+	if ! grep -E 'ihk\s' /proc/modules &>/dev/null; then
+		echo -e "[insmod] ihk\n"
+		if ! $E insmod "$ihk_ko" 2>/dev/null; then
+			echo "error: loading ihk" >&2
+		fi
+	else
+		echo -e "[insmod] ihk (skip)\n"
+	fi
+
+	#
+	# Increase swappiness so that we have better chance to allocate memory for IHK
+	#
+	if [ $dry_run -eq 1 ]; then
+		$E "echo 100 > /proc/sys/vm/swappiness"
+	else
+		echo 100 > /proc/sys/vm/swappiness
+	fi
+
+	#
+	# Drop Linux caches to free memory
+	#
+	$E sync && $E echo 3 > /proc/sys/vm/drop_caches
+
+	#
+	# Merge free memory areas into large, physically contigous ones
+	#
+	$E echo 1 > /proc/sys/vm/compact_memory 2>/dev/null
+
+	$E sync
+
+	echo -e "[insmod] ihk_smp\n"
+	$E insmod "$ihk_smp_ko" ihk_start_irq=${ihk_irq} ihk_nr_irq=${nr_irq} 2>/dev/null
+
+	#
+	# Free MCDRAM (special case for OFP SNC-4 mode)
+	#
+	if [ "`hostname | grep "c[0-9][0-9][0-9][0-9].ofp"`" != "" ] && [ "`cat /sys/devices/system/node/online`" == "0-7" ]; then
+		for i in 4 5 6 7; do
+			find /sys/devices/system/node/node$i/memory*/ -name "online" | while read f; do
+				echo 0 > $f 2>&1 > /dev/null;
+			done
+			find /sys/devices/system/node/node$i/memory*/ -name "online" | while read f; do
+				echo 1 > $f 2>&1 > /dev/null;
+			done
+		done
+	fi
+
+	#
+	# reserve resource
+	#
+	$E "$ihkconfig" 0 reserve mem "$mem_string"
+	$E "$ihkconfig" 0 reserve cpu "$num_cpu"
+
+	#
+	# get max chunk size
+	#
+	if [ "$E" != "" ]; then
+		$E "dmesg | tail -n 20 | grep \"IHK-SMP: chunk\" > $smp_resource_info"
+	else
+		dmesg | tail -n 20 | grep "IHK-SMP: chunk" > "$smp_resource_info"
+	fi
+}
+
+boot()
+{
+	local num_cpu="$1"
+	local mem_string="${2}M"
+	local max_node=`cat /sys/devices/system/node/online | cut -d \- -f2`
+
+	if [ $dry_run -eq 1 ]; then
+		E=echo;
+	else
+		E=
+	fi
+
+	if [ $preset_num -ne 0 ]; then
+		if [ $max_node -eq 3 ]; then
+			case $preset_num in
+				1) echo "use NUMA-preset $preset_num memory: 512 MiB, numa: 4 separation"
+				   mem_string="512M@0,512M@1,512M@2,512M@3"
+				   ;;
+				2) echo "use NUMA-preset $preset_num memory:   1 GiB, numa: 4 separation"
+				   mem_string="1024M@0,1024M@1,1024M@2,1024M@3"
+				   ;;
+				3) echo "use NUMA-preset $preset_num memory:   2 GiB, numa: 4 separation"
+				   mem_string="2048M@0,2048M@1,2048M@2,2048M@3"
+				   ;;
+				4) echo "use NUMA-preset $preset_num memory:   3 GiB, numa: 4 separation"
+				   mem_string="3072M@0,3072M@1,3072M@2,3072M@3"
+				   ;;
+				5) echo "use NUMA-preset $preset_num memory:   4 GiB, numa: 4 separation"
+				   mem_string="4096M@0,4096M@1,4096M@2,4096M@3"
+				   ;;
+			esac
+		elif [ $max_node -eq 7 ]; then
+			case $preset_num in
+				1) echo "use NUMA-preset $preset_num memory: 512 MiB, numa: 4 separation"
+				   mem_string="512M@4,512M@5,512M@6,512M@7"
+				   ;;
+				2) echo "use NUMA-preset $preset_num memory:   1 GiB, numa: 4 separation"
+				   mem_string="1024M@4,1024M@5,1024M@6,1024M@7"
+				   ;;
+				3) echo "use NUMA-preset $preset_num memory:   2 GiB, numa: 4 separation"
+				   mem_string="2048M@4,2048M@5,2048M@6,2048M@7"
+				   ;;
+				4) echo "use NUMA-preset $preset_num memory:   3 GiB, numa: 4 separation"
+				   mem_string="3072M@4,3072M@5,3072M@6,3072M@7"
+				   ;;
+				5) echo "use NUMA-preset $preset_num memory:   4 GiB, numa: 4 separation"
+				   mem_string="4096M@4,4096M@5,4096M@6,4096M@7"
+				   ;;
+			esac
+		else
+			echo -e "max_node=${max_node} unsupported, reserve memory size using ${mem_string}.\n"
+		fi
+	fi
+
+	#
+	# print info
+	#
+	echo "----------"
+	if [ -f "$mck_build_info" ]; then
+		cat "$mck_build_info"
+	fi
+	echo ""
+	echo "image: $mck_img"
+	echo "cpu: $m_num_cpu"
+	echo "mem: $mem_string"
+	echo "----------"
+
+	#
+	# load syscall forwarder, if not loaded
+	#
+	if ! grep mcctrl /proc/modules &>/dev/null; then
+		echo -e "[insmod]mcctrl.ko\n"
+		$E insmod "$mcctrl_ko" 2>/dev/null
+	else
+		echo -e "already insmod mcctrl.ko, SKIP.\n"
+	fi
+
+	#
+	# Check for existing OS instance and destroy
+	#
+	if [ -c /dev/mcos0 ]; then
+		$E "$ihkconfig" 0 destroy 0
+		if [ $? -ne 0 ]; then
+			$E echo "warning: destroy failed" >&2
+		fi
+	fi
+
+	#
+	# create OS file
+	#
+	echo -e "[create]\n"
+	$E "$ihkconfig" 0 create
+
+	#
+	# allocate resource
+	#
+	echo -e "[alloc-cpu]\n"
+	$E "$ihkosctl" 0 assign cpu "$num_cpu"
+	$E echo "cpu: $num_cpu" > "$mcos_info"
+
+	if [ "$ikc_map" != "" ]; then
+		echo -e "[ikc_map setting]\n"
+		$E "$ihkosctl" 0 set ikc_map ${ikc_map}
+		if [ $? -ne 0 ]; then
+			echo "error: assign CPUs" >&2
+			exit 1
+		fi
+	fi
+
+	echo -e "[alloc-mem]\n"
+	$E "$ihkosctl" 0 assign mem "$mem_string"
+	$E echo "mem: $mem_string" >> "$mcos_info"
+
+	#
+	# set mck boot argument
+	#
+	echo -e "[kargs]\n"
+	$E "$ihkosctl" 0 kargs "hidos ksyslogd=${LOGMODE}"
+
+	#
+	# load kernel and boot (assumes mcos-output as kernel image dir)
+	#
+	echo -e "[load]\n"
+	$E "$ihkosctl" 0 load "$mck_img"
+
+	echo -e "[boot]\n"
+	$E "$ihkosctl" 0 boot
+	sleep 1
+
+	$E chown ${chown_option} /dev/mcd* /dev/mcos*
+	if [ $? -ne 0 ]; then
+		echo "error: chowning device files" >&2
+		exit 1
+	fi
+
+	if [ -n "$enable_mcoverlay" ]; then
+		if [ ! -e "$mcos_dir" ]; then
+			$E mkdir -p "$mcos_dir"
+		fi
+		$E mount -t tmpfs tmpfs "$mcos_dir"
+		if [ $? -ne 0 ]; then
+			echo "error: mount "$mcos_dir"" >&2
+			exit 1
+		fi
+		if [ ! -e "$linux_proc" ]; then
+			$E mkdir -p "$linux_proc"
+		fi
+		$E mount --bind /proc "$linux_proc"
+		if [ $? -ne 0 ]; then
+			echo "error: mount "$linux_proc"" >&2
+			exit 1
+		fi
+		echo -e "[insmod]mcoverlay.ko\n"
+		$E insmod "$mcoverlay_ko" 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "error: inserting mcoverlay.ko" >&2
+			exit 1
+		fi
+		while [ ! -e "/proc/mcos0" ]
+		do
+			usleep 100000
+		done
+		if [ $? -ne 0 ]; then
+			echo "error: mount "$mcos_dir"" >&2
+			exit 1
+		fi
+		if [ ! -e "$mcos0_proc" ]; then
+			$E mkdir -p "$mcos0_proc"
+		fi
+		if [ ! -e "$mcos0_proc_upper" ]; then
+			$E mkdir -p "$mcos0_proc_upper"
+		fi
+		if [ ! -e "$mcos0_proc_work" ]; then
+			$E mkdir -p "$mcos0_proc_work"
+		fi
+		$E mount -t mcoverlay mcoverlay -o lowerdir="/proc/mcos0":/proc,upperdir="$mcos0_proc_upper",workdir="$mcos0_proc_work",nocopyupw,nofscheck "$mcos0_proc"
+		if [ $? -ne 0 ]; then
+			echo "error: mount "$mcos0_proc"" >&2
+			exit 1
+		fi
+		while [ ! -e "$virtual_sys_dir" ]
+		do
+			usleep 100000
+		done
+		$E mount --make-rprivate /proc
+
+		while [ ! -e ${virtual_sys_dir}/setup_complete ]
+		do
+			usleep 100000
+		done
+		if [ ! -e "$mcos0_sys_dir" ]; then
+			$E mkdir -p "$mcos0_sys_dir"
+		fi
+		if [ ! -e "$mcos0_sys_upper" ]; then
+			$E mkdir -p "$mcos0_sys_upper"
+		fi
+		if [ ! -e "$mcos0_sys_work" ]; then
+			$E mkdir -p "$mcos0_sys_work"
+		fi
+		$E mount -t mcoverlay mcoverlay -o lowerdir="$virtual_sys_dir":/sys,upperdir="$mcos0_sys_upper",workdir="$mcos0_sys_work",nocopyupw,nofscheck "$mcos0_sys_dir";
+		if [ $? -ne 0 ]; then
+			echo "error: mount "$mcos0_sys_dir"" >&2
+			exit 1
+		fi
+		if [ -e $mount_find ]; then
+			find_path=$mount_find
+		fi
+		$E mount --make-rprivate /sys
+
+		$E touch ${mcos0_proc}/mckernel
+
+		$E rm -rf ${mcos0_sys_dir}/setup_complete
+
+		# Hide NUMA related files which are outside the LWK partition
+		for cpuid in $( $find_path "${cpu_dir}/*" -maxdepth 0 -name "cpu[0123456789]*" -printf "%f " )
+		do
+			if [ ! -e "${virtual_mcos0_dir}/${cpu_dir}/${cpuid}" ]; then
+				$E rm -rf "${mcos0_sys_dir}/devices/system/cpu/${cpuid}"
+				$E rm -rf "${mcos0_sys_dir}/bus/cpu/devices/${cpuid}"
+				$E rm -rf "${mcos0_sys_dir}/bus/cpu/drivers/processor/${cpuid}"
+			else
+				for nodeid in $( $find_path "${devices_dir}/system/cpu/${cpuid}/*" -maxdepth 0 -name "node[0123456789]*" -printf "%f " )
+				do
+					if [ ! -e "${virtual_sys_dir}/sys/devices/system/cpu/${cpuid}/${nodeid}" ]; then
+						$E rm -f ${mcos0_sys_dir}/devices/system/cpu/${cpuid}/${nodeid}
+					fi
+				done
+			fi
+		done
+		for nodeid in $( $find_path "${devices_dir}/system/node/*" -maxdepth 0 -name "node[0123456789]*" -printf "%f " )
+		do
+			if [ ! -e "${virtual_sys_dir}/devices/system/node/${nodeid}" ]; then
+				$E rm -rf ${mcos0_sys_dir}/devices/system/node/${nodeid}/*
+				$E rm -rf ${mcos0_sys_dir}/bus/node/devices/${nodeid}
+			else
+				# Delete non-existent symlinks
+				for cpuid in $( $find_path "${devices_dir}/system/node/${nodeid}/*" -maxdepth 0 -name "cpu[0123456789]*" -printf "%f " )
+				do
+					if [ ! -e "${virtual_sys_dir}/sys/devices/system/node/${nodeid}/${cpuid}" ]; then
+						$E rm -f ${mcos0_sys_dir}/devices/system/node/${nodeid}/${cpuid}
+					fi
+				done
+
+				$E rm -f ${mcos0_sys_dir}/devices/system/node/${nodeid}/memory*
+			fi
+		done
+		$E rm -f ${mcos0_sys_dir}/devices/system/node/has_*
+		for cpuid in $( $find_path "${cpu_devices_dir}/*" -maxdepth 0 -name "cpu[0123456789]*" -printf "%f " )
+		do
+			if [ ! -e "$virtual_mcos0_dir}/${cpu_devices_dir}/${cpuid}" ]; then
+				$E rm -rf "${mcos0_sys_dir}/bus/cpu/devices/${cpuid}"
+			fi
+		done
+	fi
+}
+
+shutdown()
+{
+	if [ $dry_run -eq 1 ]; then
+		E=echo;
+	else
+		E=
+	fi
+
+	#
+	# Remove mcoverlay if loaded
+	#
+	if grep mcoverlay /proc/modules &>/dev/null; then
+		if [ -n "$( cat "$mounts" | grep "$mcos0_sys_dir" )" ]; then
+			$E umount -l "$mcos0_sys_dir"
+		fi
+		if [ -n "$( cat "$mounts" | grep "$mcos0_proc" )" ]; then
+			$E umount -l "$mcos0_proc"
+		fi
+		if [ -n "$( cat "$mounts" | grep "$linux_proc" )" ]; then
+			$E umount -l "$linux_proc"
+		fi
+		if [ -n "$( cat "$mounts" | grep "$mcos_dir" )" ]; then
+			$E umount -l "$mcos_dir";
+		fi
+		if [ -e "$mcos_dir" ]; then
+			$E rm -rf "$mcos_dir";
+		fi
+		echo -e "[rmmod]mcoverlay.ko\n"
+		$E rmmod mcoverlay 2>/dev/null
+		if [ $? -ne 0 ]; then
+			echo "error: removing mcoverlay" >&2
+			exit 1
+		fi
+	fi
+
+	#
+	# Destroy all LWK instances
+	#
+	if ls /dev/mcos* 1>/dev/null 2>&1; then
+		for i in /dev/mcos*; do
+			local ind=`echo ${i} | cut -c10-`;
+			echo -e "[destroy:${ind}]\n"
+			$E "$ihkconfig" 0 destroy ${ind}
+			if [ $? -ne 0 ]; then
+				echo "error: destroying LWK instance ${ind} failed"
+				exit 1
+			fi
+		done
+	fi
+}
+
+release()
+{
+	if [ $dry_run -eq 1 ]; then
+		E=echo
+	else
+		E=
+	fi
+
+	#
+	# remove syscall forwarder, if loaded
+	#
+	if [ "$mcctrl_no_unload" != "yes" ]; then
+		if [ "`lsmod | grep mcctrl`" != "" ]; then
+			echo -e "[rmmod]mcctrl.ko\n"
+			$E rmmod "$mcctrl_ko" 2>/dev/null || echo "warning: failed to remove mcctrl" >&2
+		else
+			echo -e "already rmmod mcctrl.ko, SKIP.\n"
+		fi
+	else
+		echo -e "keep mcctrl.ko insmod.\n"
+	fi
+
+	#
+	# remove module
+	#
+	echo -e "[rmmod] ihk_smp\n"
+	$E rmmod "$ihk_smp_ko" 2>/dev/null || echo "warning: failed to remove ihk_smp" >&2
+
+	if [ "$mcctrl_no_unload" != "yes" ]; then
+		echo -e "[rmmod] ihk\n"
+		$E rmmod "$ihk_ko" 2>/dev/null || echo "warning: failed to remove ihk" >&2
+	else
+		echo -e "keep ihk.ko insmod.\n"
+	fi
+
+	# Stop mcklogd
+	$E pkill mcklogd
+
+	# Set back default swappiness
+	echo 60 > /proc/sys/vm/swappiness
+}
