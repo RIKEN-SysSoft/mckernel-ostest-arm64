@@ -346,19 +346,29 @@ reserve()
 	fi
 
 	#
-	# reserve resource
+	# reserve memory
 	#
+	echo "ihkconfig 0 reserve mem $mem_string"
 	$E "$ihkconfig" 0 reserve mem "$mem_string"
-	$E "$ihkconfig" 0 reserve cpu "$num_cpu"
 
 	#
 	# get max chunk size
 	#
 	if [ "$E" != "" ]; then
-		$E "dmesg | tail -n 20 | grep \"IHK-SMP: chunk\" > $smp_resource_info"
+	    $E "dmesg | tail -n 20 | grep \"IHK-SMP: chunk\" > $smp_resource_info"
 	else
-		dmesg | tail -n 20 | grep "IHK-SMP: chunk" > "$smp_resource_info"
+	    dmesg | tail -n 20 | grep "IHK-SMP: chunk" > "$smp_resource_info"
 	fi
+
+	if [ "`cat $smp_resource_info | wc -l`" == "0" ]; then
+	    echo "$(basename $0): ERROR: memory reservation log not found"
+	fi
+
+	#
+	# reserve cpu
+	#
+	echo "ihkconfig 0 reserve cpu $num_cpu"
+	$E "$ihkconfig" 0 reserve cpu "$num_cpu"
 }
 
 boot()
