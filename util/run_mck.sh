@@ -190,6 +190,12 @@ if [ $dry_run -eq 0 ]; then
 			max_chunk_size=$size
 		fi
 	done < "$smp_resource_info"
+
+	if [ $max_chunk_size -le $large_page_size ]; then
+	    echo "memory size ($max_chunk_size) must be greater than $large_page_size. Increse the value in ./config"
+	    exit 1
+	fi
+
 	max_chunk_size=$(( $max_chunk_size / $MiB ))
 	IFS="$old_ifs"
 else

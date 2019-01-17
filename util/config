@@ -8,6 +8,10 @@ if [ -z "$page_size" ]; then
 	page_size=4096
 fi
 
+page_shift=$(export page_size=4096 && perl -e '$sz=$ENV{page_size}; $i++ while $sz >>= 1; print $i;')
+large_page_shift=$((page_shift + 9 + page_shift - 12))
+large_page_size=$((1 << large_page_shift))
+
 #
 # options value
 #
