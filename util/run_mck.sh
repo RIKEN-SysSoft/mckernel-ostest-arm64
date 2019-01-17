@@ -120,7 +120,17 @@ if [ -n "$enable_mcoverlay" ]; then
 		if [ ${linux_version_code} -eq 199168 -a ${rhel_release} -ge 327 ]; then
 			enable_mcoverlay="yes"
 		fi
+		if [ ${linux_version_code} -eq 266752 -a ${rhel_release} -ge 32 ]; then
+			enable_mcoverlay="yes"
+		fi
 	fi
+fi
+
+printf "mcoverlayfs is "
+if [ -n "$enable_mcoverlay" ]; then
+    echo "enabled"
+else
+    echo "disabled"
 fi
 
 mem_size=$(( $mem_size ))
