@@ -28,6 +28,10 @@ if [ "$1" == "clean" ]; then
 	exit 0
 fi
 
+if [ ! -d ./bin ]; then
+    mkdir bin
+fi
+
 while read line
 do
 	cp ${line} ./bin/
