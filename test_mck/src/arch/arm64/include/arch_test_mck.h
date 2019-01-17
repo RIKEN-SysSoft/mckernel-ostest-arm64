@@ -7,7 +7,6 @@
 #define CONFIG_ARM64_PGTABLE_LEVELS 3
 #define CONFIG_ARM64_VA_BITS        48
 //#define CONFIG_ARM64_PGTABLE_LEVELS 4
-#define CONFIG_ARM64_64K_PAGES    1
 #define VA_BITS                     CONFIG_ARM64_VA_BITS
 
 /* auxv */

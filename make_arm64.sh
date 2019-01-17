@@ -9,6 +9,21 @@ export IHKUSR_INCLUDE_DIR=${MCK_DIR}/include
 export LIBDIR=${MCK_DIR}/lib
 
 MAKECMD="make"
+MAKEOPT=""
+
+page_size=`getconf PAGE_SIZE`
+case $page_size in
+    65536)
+	MAKEOPT="CPPFLAGS=\"-DCONFIG_ARM64_64K_PAGES=1\""
+	;;
+    4096)
+	;;
+    *)
+	echo "$(basename $0): ERROR: unsupported page size ($page_size)"
+	exit 1
+	;;
+esac
+
 if [ "$1" == "clean" ]; then
 	MAKECMD="make clean"
 fi
@@ -16,7 +31,7 @@ fi
 while read line
 do
 	pushd ${line}
-	${MAKECMD}
+	$MAKECMD $MAKEOPT
 	if [ $? != 0 ]; then
 		exit 1
 	fi
