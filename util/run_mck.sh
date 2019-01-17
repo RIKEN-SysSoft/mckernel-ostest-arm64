@@ -201,7 +201,11 @@ if [ $dry_run -eq 0 ]; then
 else
 	max_chunk_size="(memory-size)"
 fi
+
+echo "Actual amount of memory reserved: ${max_chunk_size}MB"
+
 if [ "$m_num_cpu" = "all" ]; then
 	m_num_cpu="$p_num_cpu"
 fi
+
 boot "$m_num_cpu" $max_chunk_size

@@ -260,7 +260,7 @@ reserve()
 				5) mem_string="4096M@0"
 				   ;;
 			esac
-			echo "ihkconfig 0 reserve $mem_string"
+			echo "Reserving memory of $mem_string"
 		fi
 	fi
 
@@ -438,7 +438,7 @@ boot()
 				5) mem_string="4096M@0"
 				   ;;
 			esac
-			echo "ihkosctl 0 assign $mem_string"
+			echo "Assigning memory of $mem_string"
 		fi
 	fi
 
@@ -484,7 +484,7 @@ boot()
 	#
 	# allocate resource
 	#
-	echo -e "[alloc-cpu]\n"
+	echo -e "[alloc-cpu] ihkosctl 0 assign cpu ${num_cpu}\n"
 	$E "$ihkosctl" 0 assign cpu "$num_cpu"
 	$E echo "cpu: $num_cpu" > "$mcos_info"
 
@@ -497,7 +497,7 @@ boot()
 		fi
 	fi
 
-	echo -e "[alloc-mem]\n"
+	echo -e "[alloc-mem] ihkosctl 0 assign mem ${mem_string}\n"
 	$E "$ihkosctl" 0 assign mem "$mem_string"
 	$E echo "mem: $mem_string" >> "$mcos_info"
 
