@@ -23,7 +23,7 @@ README COPYRIGHT FUJITSU LIMITED 2019
 
 
 ■実行方法
-  $ sh ./util/run_rt_postk.sh -p <numa-setting#> -b
+  $ sudo sh ./util/run_rt_postk.sh -p <numa-setting#> -b -s <group_id>
 
     -p NUMA/メモリ設定の指定
        1: 4ノード、各ノード 512MiB
@@ -36,6 +36,9 @@ README COPYRIGHT FUJITSU LIMITED 2019
        全てexecveを経由させる項目を実行する。
        前者のみ実行する場合は代わりに-nを、
        後者のみ実行する場合には代わりに-eを指定する。
+
+    -s テストを実施するグループのidを指定する。
+       idとテスト項目との対応はrun_testset_postk.shを参照されたい。
 
   テストスクリプト内部でMcKernelの実行/終了を含むため、
   事前に起動させておく必要はない。
