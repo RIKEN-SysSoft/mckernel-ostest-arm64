@@ -191,6 +191,7 @@ fi
 	ulimit -S -c 0
 
 	#### boot McKernel ####
+	sh "$shutdown_mck_sh"
 	echo "boot McKernel, HOST core is #$host_core"
 	sh $run_mck_sh -a $host_core $boot_numa_opt -v -r $ikc_map
 
