@@ -243,7 +243,20 @@ reserve()
 				   ;;
 			esac
 		else
-			echo -e "max_node=${max_node} unsupported, reserve memory size using ${mem_string}.\n"
+			echo "WARNING: unexpected number of NUMA-nodes ($((max_node + 1))), falling back to use only one NUMA-node"
+			case $preset_num in
+				1) mem_string="512M@0"
+				   ;;
+				2) mem_string="1024M@0"
+				   ;;
+				3) mem_string="2048M@0"
+				   ;;
+				4) mem_string="3072M@0"
+				   ;;
+				5) mem_string="4096M@0"
+				   ;;
+			esac
+			echo "ihkconfig 0 reserve $mem_string"
 		fi
 	fi
 
@@ -398,7 +411,20 @@ boot()
 				   ;;
 			esac
 		else
-			echo -e "max_node=${max_node} unsupported, reserve memory size using ${mem_string}.\n"
+			echo "WARNING: unexpected number of NUMA-nodes ($((max_node + 1))), falling back to use only one NUMA-node"
+			case $preset_num in
+				1) mem_string="512M@0"
+				   ;;
+				2) mem_string="1024M@0"
+				   ;;
+				3) mem_string="2048M@0"
+				   ;;
+				4) mem_string="3072M@0"
+				   ;;
+				5) mem_string="4096M@0"
+				   ;;
+			esac
+			echo "ihkosctl 0 assign $mem_string"
 		fi
 	fi
 
