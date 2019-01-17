@@ -8,7 +8,6 @@ hello_world/hello_world
 hello_world/goto_user
 hello_world/exit_group
 hello_world/glibc_hello_world
-hello_world/glibc_hello_world.static
 test_mck/bin/test_mck
 test_drv/test_mck.ko
 show_affinity/show_affinity
