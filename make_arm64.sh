@@ -9,12 +9,12 @@ export IHKUSR_INCLUDE_DIR=${MCK_DIR}/include
 export LIBDIR=${MCK_DIR}/lib64
 
 MAKECMD="make"
-MAKEOPT=""
+MAKEOPT="-j"
 
 page_size=`getconf PAGE_SIZE`
 case $page_size in
     65536)
-	MAKEOPT="CPPFLAGS=\"-DCONFIG_ARM64_64K_PAGES=1\""
+	MAKEOPT+=" CPPFLAGS=\"-DCONFIG_ARM64_64K_PAGES=1\""
 	;;
     4096)
 	;;
