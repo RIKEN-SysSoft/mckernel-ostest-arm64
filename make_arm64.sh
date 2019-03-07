@@ -4,9 +4,9 @@
 . ${HOME}/.mck_test_config
 
 export ARCH=arm64
-export LIBIHK_DIR=${MCK_DIR}/lib
+export LIBIHK_DIR=${MCK_DIR}/lib64
 export IHKUSR_INCLUDE_DIR=${MCK_DIR}/include
-export LIBDIR=${MCK_DIR}/lib
+export LIBDIR=${MCK_DIR}/lib64
 
 MAKECMD="make"
 MAKEOPT=""
