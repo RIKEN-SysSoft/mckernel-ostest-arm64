@@ -41,8 +41,8 @@ CFLAGS += -Wstrict-prototypes
 CFLAGS += -funsigned-char
 
 # preprocess.
-CPPFLAGS += $(foreach dir,$(INC_DIRS),-I$(dir))
-CPPFLAGS += -D_GNU_SOURCE
+override CPPFLAGS += $(foreach dir,$(INC_DIRS),-I$(dir))
+override CPPFLAGS += -D_GNU_SOURCE
 
 # link.
 LDFLAGS  += -lpthread

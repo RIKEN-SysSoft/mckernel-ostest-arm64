@@ -37,7 +37,7 @@ ASFLAGS += -mcpu=all
 LDFLAGS += -lihk
 
 # preprocess
-CPPFLAGS += $(foreach dir,$(INC_DIRS),-I$(dir))
+override CPPFLAGS += $(foreach dir,$(INC_DIRS),-I$(dir))
 
 #--------
 # targets
