@@ -1,15 +1,10 @@
 #!/bin/sh
 # run_testset_postk.sh COPYRIGHT FUJITSU LIMITED 2015-2018
 
-source ./before_run_testcase.sh
+recorddir=`pwd`
 
-# Taken care of by before_*.sh in individual run
-echo a > $mmapfile_name
-dd if=/dev/zero of=${temp} bs=1M count=10
-ln -s ${temp} ${link}
-
-echo $ostype_str > $ostype_name
-cat $org_pid_max > $pid_max_name
+# Use recorddir and define mcexec, linux_run etc.
+. ./init.sh
 
 # RT_BLOCK 1 start
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
@@ -24,25 +19,23 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 	${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name
 
 	echo "## lv07_loop ##"
+	if [ "$DRYRUN" != ":" ]; then
 	count=1
-	${DRYRUN} touch ${lv07_tmp_before}
-	while [ $count -le $mck_max_cpus ]
+	touch ${lv07_tmp_before}
+	while [ $count -le $num_app_cpus ]
 	do
-		if [ "$DRYRUN" != ":" ]; then
 		${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $count | tee ${lv07_tmp}
 		work_str=`cat ${lv07_tmp}`
 		echo ${work_str} | grep -o ".:${ostype_str}" | sort > ${lv07_tmp}
 		diff ${lv07_tmp_before} ${lv07_tmp}
 		mv ${lv07_tmp} ${lv07_tmp_before}
-		else
-			printf '${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name '
-			printf $count
-			echo '| tee ${lv07_tmp}'
-		fi
 		count=`expr $count + 1`
 	done
-	${DRYRUN} rm ${lv07_tmp_before}
+	rm ${lv07_tmp_before}
 	count=0
+	else
+		echo '${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name ${count}'
+	fi
 
 	echo "## lv09 ##"
 	if [ "$DRYRUN" != ":" ]; then
@@ -156,10 +149,10 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 	done
 
 	echo "## mem_stack_limits ##"
-	${mcexec} -s 10485760,10485760 $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 9961472
+	${mcexec} -s 2097152,10485760 $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 9961472
 
 	if [ "$DRYRUN" == ":" ] || [ $mck_max_mem_size -ge 2244120412 ]; then
-		${mcexec} -s 2147483648,2147483648 $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 2040109466
+		${mcexec} -s 2097152,2147483648 $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s 2040109466
 	else
 		echo "## mem_stack_limits 2GiB SKIP ##"
 	fi
@@ -170,19 +163,15 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 3 ]; then
 	if [ $sep_run_num -eq 3 ]; then
 		echo "## mem_stack_limits ##"
 	fi
-	${DRYRUN} echo "MCKERNEL_RLIMIT_STACK=mckernel_max_memory_size x 110%"
-	${mcexec} -s ${mck_max_mem_size_110p},${mck_max_mem_size_110p} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_95p
+	${mcexec} -s 2097152,${mck_max_mem_size_110p} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_95p
 fi # RT_BLOCK 3 end
 
 # RT_BLOCK 4 start
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 4 ]; then
 	if [ $sep_run_num -eq 4 ]; then
 		echo "## mem_stack_limits ##"
-		${DRYRUN} echo "MCKERNEL_RLIMIT_STACK=mckernel_max_memory_size x 110%"
-		${mcexec} -s ${mck_max_mem_size_110p},${mck_max_mem_size_110p} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
-	else
-		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
 	fi
+	${mcexec} -s 2097152,${mck_max_mem_size_110p} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_stack_limits -n 0 -- -s $mck_max_mem_size_110p
 fi # RT_BLOCK 4 end
 
 # RT_BLOCK 5 start
@@ -349,7 +338,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s remap_file_pages -n 0 -- -s $((256*1024*1024))
 
 	echo "## mem_limits ##"
-	if [ "X$runHOST" = Xyes ]; then
+	if [ "$linux_run" == "yes" ]; then
 		swapoff -a
 	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f mmap -s $((1024*1024)) -c 1
@@ -357,7 +346,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f mmap -s $mck_max_mem_size -c 1
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f mmap -S mmap -c 1
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f brk -s $((1024*1024)) -c 1
-	if [ "X$runHOST" = Xyes ]; then
+	if [ "$linux_run" == "yes" ]; then
 		swapon -a
 	fi
 fi # RT_BLOCK 5 end
@@ -368,11 +357,11 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 6 ]; then
 		echo "## mem_limits ##"
 	fi
 
-	if [ "X$runHOST" = Xyes ]; then
+	if [ "$linux_run" == "yes" ]; then
 		swapoff -a
 	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f brk -s $mck_max_mem_size_95p -c 1
-	if [ "X$runHOST" = Xyes ]; then
+	if [ "$linux_run" == "yes" ]; then
 		swapon -a
 	fi
 fi # RT_BLOCK 6 end
@@ -383,11 +372,11 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 7 ]; then
 		echo "## mem_limits ##"
 	fi
 
-	if [ "X$runHOST" = Xyes ]; then
+	if [ "$linux_run" == "yes" ]; then
 		swapoff -a
 	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mem_limits -n 0 -- -f brk -s $mck_max_mem_size -c 1
-	if [ "X$runHOST" = Xyes ]; then
+	if [ "$linux_run" == "yes" ]; then
 		swapon -a
 	fi
 fi # RT_BLOCK 7 end
@@ -396,11 +385,11 @@ fi # RT_BLOCK 7 end
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	if [ "$DRYRUN" == ":" ] || [ $mck_max_node_mem_size -ge 2684354560 ]; then
 		echo "## large_bss ##"
-		if [ "X$runHOST" = Xyes ]; then
+		if [ "$linux_run" == "yes" ]; then
 			swapoff -a
 		fi
 		${mcexec} $execve_comm "${app_dir}/large_bss"
-		if [ "X$runHOST" = Xyes ]; then
+		if [ "$linux_run" == "yes" ]; then
 			swapon -a
 		fi
 	else
@@ -529,7 +518,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 3 -- -p $mck_max_cpus
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 4 -- -p $mck_max_cpus
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 5 -- -p $mck_max_cpus
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 6 -- -p $getaff_cpus -f "$app_dir/show_affinity" -- -p $getaff_cpus
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 6 -- -p $getaff_cpus -f "$app_dir/show_affinity" -o ${workdir}/cpuset_forked -- -p $getaff_cpus -o ${workdir}/cpuset_execed
 
 	echo "## pthread_setaffinity ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s pthread_setaffinity -n 0 -- -p $mck_max_cpus
@@ -756,12 +745,13 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s fpregs -n 4
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s fpregs -n 5 -- -p $mck_max_cpus
 
-	if ["$linux_run" == "no" ];  then
+	if [ "$linux_run" == "no" ];  then
 	echo "## binfmt ##"
 	if [ "$DRYRUN" != ":" ]; then
 	MCEXEC_WL=$(cd ${app_dir}; pwd -P) $binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0
 	else
 		echo 'MCEXEC_WL=$(cd ${app_dir}; pwd -P) $binfmt_prefix_comm "$app_dir/test_mck" $execve_arg_end -s get_cpu_id -n 0'
+	fi
 	fi
 
 	echo "## time_sharing ##"
@@ -927,34 +917,34 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	if [ "$linux_run" == "no" ]; then
 	echo "## cpu_pa_info ##"
 	## cpu_pa_info test#0 ##
-	"${app_dir}/cpu_pa_info" 0 0
+	${linux_exec} "${app_dir}/cpu_pa_info" 0 0
 
 	## cpu_pa_info test#1 ##
-#	"${app_dir}/cpu_pa_info" 0 1
+#	${linux_exec} "${app_dir}/cpu_pa_info" 0 1
 
 	## cpu_pa_info test#2 ##
-	"${app_dir}/cpu_pa_info" 0 2
+	${linux_exec} "${app_dir}/cpu_pa_info" 0 2
 
 	## cpu_pa_info test#3 ##
-	"${app_dir}/cpu_pa_info" 0 3
+	${linux_exec} "${app_dir}/cpu_pa_info" 0 3
 
 	## cpu_pa_info test#4 ##
-	"${app_dir}/cpu_pa_info" 0 4
+	${linux_exec} "${app_dir}/cpu_pa_info" 0 4
 
 	## cpu_pa_info test#5 ##
-	"${app_dir}/cpu_pa_info" 0 5
+	${linux_exec} "${app_dir}/cpu_pa_info" 0 5
 	fi
 
 	if [ "$linux_run" == "no" ]; then
 	echo "## get_rusage ##"
 	## get_rusage test#0 (no user process) ##
-	"${app_dir}/get_rusage" 0
+	${linux_exec} "${app_dir}/get_rusage" 0
 
 	## get_rusage test#1 (user multi thread process rinning) ##
 	${mcexec} $execve_comm "${app_dir}/single_node" & $DRYRUN_WAIT
 	if [ "$DRYRUN" != ":" ]; then
 	sleep 1
-	"${app_dir}/get_rusage" 0
+	${linux_exec} "${app_dir}/get_rusage" 0
 	wait `$pidof_mcexec`
 	fi
 	fi
@@ -985,7 +975,7 @@ fi # RT_BLOCK 10 end
 	${mcexec} $execve_comm "${app_dir}/glibc_hello_world"
 	fi
 
-	source ./after_run_testcase.sh
+	source ./fini.sh
 
 	if [ "$DRYRUN" != ":" ]; then
 	# Taken care of by after_*.sh in individual run

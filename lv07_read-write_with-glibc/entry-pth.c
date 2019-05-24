@@ -1,6 +1,4 @@
 /* entry-pth.c COPYRIGHT FUJITSU LIMITED 2015-2017 */
-#include <sys/time.h>
-#include <sys/resource.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
@@ -40,15 +38,9 @@ void read_write(int num, const char *path) {
 	cnt = fread(buf+2, sizeof(buf[0]), sizeof(buf)/sizeof(buf[0])-2, fp);
 	buf[cnt+2] = '\0';
 
-	for (i = 0; i < num; i++) {
-		pthread_barrier_wait(&barrier);
-	}
-
-	printf("%d: %s\n", num, buf);
-
-	for (; i < thread_num; i++) {
-		pthread_barrier_wait(&barrier);
-	}
+	pthread_barrier_wait(&barrier);
+	printf("%d: %s", num, buf);
+	pthread_barrier_wait(&barrier);
 
 	fclose(fp);
 }
@@ -65,10 +57,9 @@ int main(int argc, char** argv) {
 	int i = 0, ret = 0;
 	int tn[MAX_THREAD_NUM];
 	int ncpu;
-	struct rlimit rlimit_nproc;
 
-	if (argc != 4) {
-		printf("invalid argment. %s ostype-filepath <thread_num> <rlimit_nproc>\n", argv[0]);
+	if (argc != 3) {
+		printf("Invalid number of arguments. Usage: %s <ostyp_-file_path> <thread_num>\n", argv[0]);
 		return 0;
 	}
 
@@ -82,19 +73,6 @@ int main(int argc, char** argv) {
 	}
 	printf("use thread_num = %d.\n", thread_num);
 
-	ncpu = atoi(argv[3]);
-	getrlimit(RLIMIT_NPROC, &rlimit_nproc);
-	if (ncpu <= 0 || ncpu > rlimit_nproc.rlim_max) {
-		printf("rlimit_nproc invalid, 1 <= rlimit_nproc <= rlim_max\n");
-		return 0;
-	}
-	rlimit_nproc.rlim_cur = ncpu;
-	ret = setrlimit(RLIMIT_NPROC, &rlimit_nproc);
-	if (ret != 0) {
-		printf("setrlimit error\n");
-		return 0;
-	}
-	
 	for (i = 0; i < thread_num; i++) {
 		tn[i] = i;
 	}

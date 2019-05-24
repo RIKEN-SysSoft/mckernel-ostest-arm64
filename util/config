@@ -1,6 +1,14 @@
 #!/bin/sh
 # config COPYRIGHT FUJITSU LIMITED 2015-2018
 
+if [ -z $AUTOTEST_HOME ]; then
+	# Invoked from <ostest>/util/run_testset_postk.sh
+	utildir=`pwd`
+else
+	# Invoked from autotest
+	utildir=${AUTOTEST_HOME}/ostest/util
+fi
+
 KiB=1024
 MiB=$(($KiB * 1024))
 page_size=`getconf PAGE_SIZE`
@@ -22,36 +30,44 @@ facility="LOG_LOCAL6"
 chown_option=`logname 2> /dev/null`
 preset_num=0
 
+if [ $dry_run -eq 1 ]; then
+	E=echo
+else
+	E=sudo
+fi
+
 #
 # shells
 #
-shell_dir="$(cd $(dirname $0); pwd)"
+run_mck_sh=$utildir/run_mck.sh
+run_app_sh=$utildir/run_app.sh
+reboot_mck_sh=$utildir/reboot_mck.sh
+shutdown_mck_sh=$utildir/stop_mck.sh
 
-run_mck_sh=$shell_dir/run_mck.sh
-run_app_sh=$shell_dir/run_app.sh
-reboot_mck_sh=$shell_dir/reboot_mck.sh
-shutdown_mck_sh=$shell_dir/stop_mck.sh
+insmod_test_drv_sh=$utildir/insmod_test_drv.sh
+rmmod_test_drv_sh=$utildir/rmmod_test_drv.sh
 
-insmod_test_drv_sh=$shell_dir/insmod_test_drv.sh
-rmmod_test_drv_sh=$shell_dir/rmmod_test_drv.sh
+run_rt_sh=$utildir/run_rt.sh
+kmsgcat_sh=$utildir/kmsgcat.sh
 
-run_rt_sh=$shell_dir/run_rt.sh
-kmsgcat_sh=$shell_dir/kmsgcat.sh
-
-gdb_all_test_sh=$shell_dir/gdb_all_test.sh
-gdb_all_test_host_sh=$shell_dir/gdb_all_test_host.sh
-gdb_mcexec_sh=$shell_dir/gdb_mcexec.sh
-gdb_host_sh=$shell_dir/gdb_host.sh
-gdb_test_case_list=$shell_dir/gdb_test_case.list
+gdb_all_test_sh=$utildir/gdb_all_test.sh
+gdb_all_test_host_sh=$utildir/gdb_all_test_host.sh
+gdb_mcexec_sh=$utildir/gdb_mcexec.sh
+gdb_host_sh=$utildir/gdb_host.sh
+gdb_test_case_list=$utildir/gdb_test_case.list
 
 #
 # directory
 #
 
-. ${HOME}/.mck_test_config
+if [ -z $AUTOTEST_HOME ]; then
+	. ${HOME}/.mck_test_config
+else
+	MCK_DIR=${WORKDIR}/mck
+fi
 
 mck_base=${MCK_DIR}
-app_base=${shell_dir}/../bin
+app_base=${utildir}/../bin
 mck_dir=${mck_base}/smp-arm64/kernel
 ihk_dir=${mck_base}/kmod
 SBINDIR=${mck_base}/sbin
@@ -99,8 +115,8 @@ test_mck_device_dir=/dev/test_mck
 
 mck_util_ko=$app_dir/mck_util.ko
 
-smp_resource_info=$shell_dir/smp_resource.info
-mcos_info=$shell_dir/mcos.info
+smp_resource_info=$utildir/smp_resource.info
+mcos_info=$utildir/mcos.info
 
 mounts=/proc/mounts
 mcos0_proc=$mcos_dir/mcos0_proc
@@ -148,7 +164,7 @@ mkcdev()
 
 create_cdev_files()
 {
-  local E=:
+  local COMMENT_OUT=:
   local dir=$1
   local name=$2
 
@@ -156,11 +172,11 @@ create_cdev_files()
   for maj in $maj_num
   do
 	  local min_num=`ls -d /sys/dev/char/${maj}:* 2>/dev/null | sed "s|/sys/dev/char/${maj}:||g"`
-	  $E $maj:min=$min_num
+	  $COMMENT_OUT $maj:min=$min_num
 	  for min in $min_num
 	  do
 		  local devname=`cat /sys/dev/char/${maj}:${min}/uevent | grep 'DEVNAME='`
-		  $E $maj:$min:devname=$devname
+		  $COMMENT_OUT $maj:$min:devname=$devname
 
 		  echo "$devname" | grep -qE "DEVNAME=$name[0-9]*"
 		  if [ $? -eq 0 ]; then
@@ -202,12 +218,6 @@ reserve()
 	local num_cpu="$1"
 	local mem_string="${2}M"
 	local max_node=`cat /sys/devices/system/node/online | cut -d \- -f2`
-
-	if [ $dry_run -eq 1 ]; then
-		E=echo
-	else
-		E=
-	fi
 
 	if [ $preset_num -ne 0 ]; then
 		if [ $max_node -eq 3 ]; then
@@ -314,11 +324,7 @@ reserve()
 	#
 	# Increase swappiness so that we have better chance to allocate memory for IHK
 	#
-	if [ $dry_run -eq 1 ]; then
-		$E "echo 100 > /proc/sys/vm/swappiness"
-	else
-		echo 100 > /proc/sys/vm/swappiness
-	fi
+	bash -c "$E echo 100 > /proc/sys/vm/swappiness"
 
 	#
 	# Drop Linux caches to free memory
@@ -328,7 +334,7 @@ reserve()
 	#
 	# Merge free memory areas into large, physically contigous ones
 	#
-	$E echo 1 > /proc/sys/vm/compact_memory 2>/dev/null
+	bash -c "$E echo 1 > /proc/sys/vm/compact_memory 2>/dev/null"
 
 	$E sync
 
@@ -380,12 +386,6 @@ boot()
 	local num_cpu="$1"
 	local mem_string="${2}M"
 	local max_node=`cat /sys/devices/system/node/online | cut -d \- -f2`
-
-	if [ $dry_run -eq 1 ]; then
-		E=echo;
-	else
-		E=
-	fi
 
 	if [ $preset_num -ne 0 ]; then
 		if [ $max_node -eq 3 ]; then
@@ -646,12 +646,6 @@ boot()
 
 shutdown()
 {
-	if [ $dry_run -eq 1 ]; then
-		E=echo;
-	else
-		E=
-	fi
-
 	#
 	# Remove mcoverlay if loaded
 	#
@@ -697,12 +691,6 @@ shutdown()
 
 release()
 {
-	if [ $dry_run -eq 1 ]; then
-		E=echo
-	else
-		E=
-	fi
-
 	#
 	# remove syscall forwarder, if loaded
 	#
@@ -734,5 +722,5 @@ release()
 	$E pkill mcklogd
 
 	# Set back default swappiness
-	echo 60 > /proc/sys/vm/swappiness
+        bash -c "$E echo 60 > /proc/sys/vm/swappiness"
 }

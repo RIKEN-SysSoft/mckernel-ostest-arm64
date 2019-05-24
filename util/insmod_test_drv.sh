@@ -1,8 +1,15 @@
 #!/bin/sh
 # insmod_test_drv.sh COPYRIGHT FUJITSU LIMITED 2015
-E=
 
-this_dir="$(cd $(dirname $0); pwd)"
+if [ -z $AUTOTEST_HOME ]; then
+	# Invoked from <ostest>/util/run_testset_postk.sh
+	this_dir="$(cd $(dirname $0); pwd)"
+else
+	# Invoked from autotest
+	this_dir=${AUTOTEST_HOME}/ostest/util
+fi
+
+# Define test_mck_ko etc.
 source "${this_dir}/config"
 
 usage()
@@ -37,7 +44,7 @@ fi
 #
 # insmod
 #
-insmod "$test_mck_ko" ident="$ident"
+$E insmod "$test_mck_ko" ident="$ident"
 echo "insmod $test_mck_ko"
 
 #
