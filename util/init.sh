@@ -1,6 +1,6 @@
 num_system_service_cpus()
 {
-	num_cpus=`lscpu | awk -F ': *' '/^CPU[(]s[)]/ {print $2}'`
+	num_cpus=$((`lscpu --all --extended | wc -l` - 1))
 
 	if [ $num_cpus -eq 56 ]; then
 		host_core="0,14,28,42"
@@ -16,6 +16,15 @@ num_system_service_cpus()
 		ikc_map="1-${num_cpus}:$host_core"
 	fi
 	host_core_num=`echo $host_core | perl -ne '@cpus = split /,/; $ncpus = $#cpus + 1; print $ncpus . "\n";'`
+
+	# Check if the above CPU allocation assumption holds true
+	if [ "$linux_run" == "no" ]; then
+		num_mck_cpus_assumed=$((num_cpus - host_core_num))
+		num_mck_cpus_actual=$((`lscpu --offline --extended | wc -l` - 1))
+		if [ $num_mck_cpus_assumed -ne $num_mck_cpus_actual ]; then
+			echo "Warning: # of McKernel CPUs assumed ($num_mck_cpus_assumed) doesn't match the actual ($num_mck_cpus_actual)"
+		fi
+	fi
 }
 
 if [ -z $AUTOTEST_HOME ]; then
