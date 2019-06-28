@@ -3,8 +3,8 @@ if [ "${linux_run}" != "yes" ]; then
 
 	nl_linux=`wc -l $answerfile | cut -d ' ' -f 1`
 	nl_mck=`wc -l $recordfile | cut -d ' ' -f 1`
-	result_linux=`awk -F ': *' '$1=="RESULT" {print $2}' answerfile`
-	result_mck=`awk -F ': *' '$1=="RESULT" {print $2}' recordfile`
+	result_linux=`awk -F ': *' '$1=="RESULT" {print $2}' $answerfile`
+	result_mck=`awk -F ': *' '$1=="RESULT" {print $2}' $recordfile`
 
 	if [ $nl_linux -ne $nl_mck ]; then
 		rc=1

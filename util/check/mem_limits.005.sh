@@ -1,4 +1,5 @@
-sleep 2 # Wait until memory release finishes and the thread is released
+# Wait until memory release finishes and the thread is released
+sleep $((${mck_max_mem_size_95p} / (5 * 1024 * 1024 * 1024)))
 
 if [ "${linux_run}" != "yes" ]; then
 	rc=0

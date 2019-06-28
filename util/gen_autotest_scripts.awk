@@ -1,8 +1,8 @@
 #!/usr/bin/awk -f
 
 function usage() {
-    print "Create autotest scripts: awk -v target=\"autotest_scripts\" extestcase.awk"
-    print "Create scripts to generate expected results: awk -v target=\"expected_results\" extestcase.awk"
+    print "Create autotest scripts: awk -v target=autotest_scripts -f gen_autotest_scripts.awk dryrun.out"
+    print "Create scripts to generate expected results: awk -v target=expected_results -f gen_autotest_scripts.awk dryrun.out"
 }
 
 BEGIN { 
@@ -45,6 +45,7 @@ BEGIN {
 }
 
 !/^##/ {
+    command_line = $0;
     script_bn = sprintf("ostest-%s.%03d", testname, testno);
     script = sprintf("%s/%s", scriptdir, script_bn);
     recordfile = sprintf("%s/ostest-%s.%03d.output", recorddir_base, testname, testno);
@@ -67,10 +68,12 @@ BEGIN {
     printf("answerfile=%s\n", answerfile) >> script;
     printf("answerdir=%s\n\n", answerdir) >> script;
 
-    print "# Use recorddir and define mcexec, runHOST etc." >> script;
-    print ". ${AUTOTEST_HOME}/ostest/util/init.sh\n" >> script;
+    if (match($command_line, /[-]n [0-9]+/)) {
+	tp_num = substr($0, RSTART +  3, RLENGTH - 3);
+	printf("tp_num=%s\n\n", tp_num) >> script;
+    }
 
-    printf("command_line='%s'\n\n", $0) >> script;
+    printf("command_line='%s'\n\n", command_line) >> script;
 
     print(". ${AUTOTEST_HOME}/ostest/util/run.sh") >> script;
 

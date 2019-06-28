@@ -1,0 +1,1 @@
+rm $mmapfile_name

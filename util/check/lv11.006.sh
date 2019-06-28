@@ -1,1 +1,1 @@
-. ${AUTOTEST_HOME}/ostest/util/check/page_fault.sh
+. ${AUTOTEST_HOME}/ostest/util/check/segv.sh

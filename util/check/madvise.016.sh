@@ -28,16 +28,16 @@ fi
 #                 0x0000000000010000 0x0000000000010000  RW     0x10000
 
 # DODUMP
-if ! grep ${hex_addrs[0]} $recorddir/readelf.out; then
+if ! grep ${hex_addrs[0]} $recorddir/readelf.out > /dev/null; then
     rc=1
 fi
 
 # DONTDUMP
-if grep ${hex_addrs[1]} $recorddir/readelf.out; then
+if grep ${hex_addrs[1]} $recorddir/readelf.out > /dev/null; then
     rc=1
 fi
 
 # DODUMP
-if ! grep ${hex_addrs[2]} $recorddir/readelf.out; then
+if ! grep ${hex_addrs[2]} $recorddir/readelf.out > /dev/null; then
     rc=1
 fi

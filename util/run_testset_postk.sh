@@ -16,7 +16,11 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 
 	echo "## lv07 ##"
 	${mcexec} $execve_comm "${app_dir}/lv07-st" $execve_arg_end $ostype_name
-	${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name
+	if [ "$DRYRUN" != ":" ]; then
+	${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $num_app_cpus
+	else
+		echo '${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $num_app_cpus | sort'
+	fi
 
 	echo "## lv07_loop ##"
 	if [ "$DRYRUN" != ":" ]; then
@@ -204,11 +208,20 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	done
 
 	echo "## mmap_dev ##"
+
+	if [ "$DRYRUN" != ":" ]; then
+		sh "$insmod_test_drv_sh"
+	fi
+
 #REPEAL	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_dev -n 0 -- -d /dev/test_mck/mmap_dev -s 8192
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_dev -n 1 -- -d /dev/test_mck/mmap_dev2 -s 8192
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_dev -n 1 -- -d /dev/test_mck/mmap_dev2 -s $(( ($page_size/8) * $page_size + $page_size ))
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_dev -n 2 -- -d /dev/test_mck/mmap_dev2 -s 8192
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_dev -n 2 -- -d /dev/test_mck/mmap_dev2 -s $(( ($page_size/8) * $page_size + $page_size ))
+
+	if [ "$DRYRUN" != ":" ]; then
+		sh "$rmmod_test_drv_sh"
+	fi
 
 	echo "## tgkill ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s tgkill -n 0
@@ -281,18 +294,25 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	done
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n 16
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n 17
+
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/init/core.sh
+	fi
+
 	for tp_num in `seq 18 19`
 	do
-		${DRYRUN} ulimit -S -c unlimited
 		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n $tp_num -- -f $mmapfile_name
 		if [ "$DRYRUN" != ":" ]; then
-		ulimit -S -c 0
 		mv core core.madvise$tp_num.$$
 		echo "generate corefile: core.madvise$tp_num.$$"
 		gdb -x $app_dir/madvise$tp_num.inf $app_dir/test_mck core.madvise$tp_num.$$
 		readelf -l core.madvise$tp_num.$$ | tail -16
 		fi
 	done
+
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/fini/core.sh
+	fi
 
 	echo "## cpu_proc_limits ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_proc_limits -n 0 -- -p $mck_ap_num
@@ -421,6 +441,10 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s vfork -n 2 -- -f "$app_dir/execve_app"
 
 	echo "## coredump ##"
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/init/core.sh
+	fi
+
 	${DRYRUN} echo "This test case setting corefile rlimit unlimited."
 	${DRYRUN} ulimit -S -c unlimited
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s coredump -n 0
@@ -431,6 +455,10 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	readelf -a core.$$
 	file core.$$
 	gdb -x $app_dir/autorun.inf $app_dir/test_mck core.$$
+	fi
+
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/fini/core.sh
 	fi
 
 	echo "## popen ##"
@@ -761,12 +789,21 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 #SKIP	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s evtstrm -n 0
 
 	echo "## writecombine ##"
+
+	if [ "$DRYRUN" != ":" ]; then
+		sh "$insmod_test_drv_sh"
+	fi
+
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s writecombine -n 0 -- -d /dev/test_mck/writecombine
 
 	mems_allowed=`${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s procfs -n 10 | grep "Mems_allowed:"`
 	max_node=`echo $mems_allowed | awk '{print $2}' | sed 's|,||g' |tr '[a-z]' '[A-Z]'`
 	max_node=`echo "obase=2; ibase=16; $max_node" | bc | wc -c`
 	max_node=`expr $max_node - 1`
+
+	if [ "$DRYRUN" != ":" ]; then
+		sh "$rmmod_test_drv_sh"
+	fi
 
 	if [ $max_node -ge 2 ]; then
 		echo "## get_mempolicy ##"
@@ -958,6 +995,10 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 fi # RT_BLOCK 10 end
 
 	echo "## force_exit ##"
+	if [ "$DRYRUN" != ":" ]; then
+		sh "$insmod_test_drv_sh"
+	fi
+
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s force_exit -n 0 -- -f $mmapfile_name -d /dev/test_mck/mmap_dev & $DRYRUN_WAIT
 	if [ "$DRYRUN" != ":" ]; then
 	sleep 3
@@ -965,25 +1006,23 @@ fi # RT_BLOCK 10 end
 	kill -9 `$pidof_mcexec`
 	fi
 
+	if [ "$DRYRUN" != ":" ]; then
+		sh "$rmmod_test_drv_sh"
+	fi
+
 	if [ "$DRYRUN" != ":" ] && [ "$linux_run" == "no" ]; then
 	echo "shutdown_mck... (mcctrl.ko no unload, and reboot mck.)"
 	sh "$shutdown_mck_sh" -m
+	fi
+
+	if [ "$DRYRUN" != ":" ]; then
 	sh $run_mck_sh -a $host_core $boot_numa_opt -v -r $ikc_map
-	fi
-
-	if [ "$DRYRUN" != ":" ]; then
 	${mcexec} $execve_comm "${app_dir}/glibc_hello_world"
+	sh "$shutdown_mck_sh"
 	fi
 
-	source ./fini.sh
-
 	if [ "$DRYRUN" != ":" ]; then
-	# Taken care of by after_*.sh in individual run
-	rm -f $ostype_name
-	rm -f $pid_max_name
-	rm -f $link
-	rm -f $temp
-	rm -f $mmapfile_name
+		source ./fini.sh
 	fi
 
 #	if [ -e ${sh_base}/continue_end ]; then
@@ -991,4 +1030,3 @@ fi # RT_BLOCK 10 end
 #		break
 #	fi
 #done
-

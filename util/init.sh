@@ -18,7 +18,7 @@ num_system_service_cpus()
 	host_core_num=`echo $host_core | perl -ne '@cpus = split /,/; $ncpus = $#cpus + 1; print $ncpus . "\n";'`
 
 	# Check if the above CPU allocation assumption holds true
-	if [ "$linux_run" == "no" ]; then
+	if [ "$DRYRUN" != ":" ] && [ "$linux_run" == "no" ]; then
 		num_mck_cpus_assumed=$((num_cpus - host_core_num))
 		num_mck_cpus_actual=$((`lscpu --offline --extended | wc -l` - 1))
 		if [ $num_mck_cpus_assumed -ne $num_mck_cpus_actual ]; then
@@ -259,6 +259,8 @@ fi
 
 	#### host output corefile limitsize setting ####
 	orig_core_rlimit=`ulimit -S -c`
+
+	# Generate core file only when needed
 	echo "set ulimit -S -c 0"
 	ulimit -S -c 0
 	fi
@@ -302,12 +304,6 @@ fi
 		echo "mck_max_mem_size     :$mck_max_mem_size"
 		echo "mck_max_node_mem_size:$mck_max_node_mem_size"
 	fi
-	fi
-
-	#### insmod test driver ####
-	if [ "$DRYRUN" != ":" ]; then
-	echo "insmod test_drv"
-	sh "$insmod_test_drv_sh"
 	fi
 
 	if [ "$DRYRUN" != ":" ]; then

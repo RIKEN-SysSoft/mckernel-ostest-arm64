@@ -8,6 +8,6 @@ fi
 
 while read line
 do
-    sudo bash -c "AUTOTEST_HOME=/work/mcktest bash data/linux/script/$line -H"
+    AUTOTEST_HOME=/work/mcktest bash -x data/linux/script/$line -H
 done < $list
 

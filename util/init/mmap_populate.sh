@@ -1,5 +1,2 @@
-rm -rf /tmp/ostest
-mkdir -p /tmp/ostest
-mmapfile_name=/tmp/ostest/mmapfile
-echo a > $mmapfile_name
+. ${AUTOTEST_HOME}/ostest/util/init/mmapfile.sh
 

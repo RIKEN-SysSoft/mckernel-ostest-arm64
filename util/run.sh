@@ -2,9 +2,11 @@
 
 # It's sourced from /work/mcktest/data/script/ostest-* scripts.
 
+echo "## $testname ##"
 rm -rf $recorddir && mkdir -p $recorddir && pushd $recorddir
 
-echo "## $testname ##"
+# Use recorddir and define mcexec, runHOST etc.
+. ${AUTOTEST_HOME}/ostest/util/init.sh
 
 if [ -f ${AUTOTEST_HOME}/ostest/util/init/${testname}.sh ]; then
 	. ${AUTOTEST_HOME}/ostest/util/init/${testname}.sh
@@ -29,10 +31,17 @@ fi
 popd
 
 # Define rc
-if [ -f ${AUTOTEST_HOME}/ostest/util/check/${testcase}.sh ]; then
-	. ${AUTOTEST_HOME}/ostest/util/check/${testcase}.sh
-else
-	. ${AUTOTEST_HOME}/ostest/util/check/default.sh
+if [ "${linux_run}" != "yes" ]; then
+	rc=0
+
+	if [ -f ${AUTOTEST_HOME}/ostest/util/check/${testcase}.sh ]; then
+		. ${AUTOTEST_HOME}/ostest/util/check/${testcase}.sh
+	else
+		. ${AUTOTEST_HOME}/ostest/util/check/default.sh
+	fi
+
+	echo $rc > $WORKDIR/result.log
+
 fi
 
 exit $rc
