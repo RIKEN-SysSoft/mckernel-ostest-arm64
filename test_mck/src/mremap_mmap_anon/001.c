@@ -1,6 +1,7 @@
 /* 001.c COPYRIGHT FUJITSU LIMITED 2015 */
 #include "test_mck.h"
 #include "testsuite.h"
+#include <unistd.h>
 
 SETUP_ALIAS(TEST_SUITE, TEST_NUMBER, 0)
 
@@ -11,9 +12,13 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		{.size = MREMAP_RANGE_SIZE, .nopage = 0, .prot = PROT_NONE},            // use   use
 	};
 	size_t pcount = sizeof(params)/sizeof(params[0]);
-	size_t old_size = 0xffffffffffffe000;
-	size_t new_size = 0xffffffffffffe000;
+	long page_size = sysconf(_SC_PAGESIZE);
+	size_t old_size;
+	size_t new_size;
 	char* remap;
+
+	old_size = (size_t)(page_size * -2);
+	new_size = old_size;
 
 	{//init
 		size_t maps;
