@@ -1,1 +1,1 @@
-rm $mmapfile_name
+. ${AUTOTEST_HOME}/ostest/util/fini/mmapfile.sh

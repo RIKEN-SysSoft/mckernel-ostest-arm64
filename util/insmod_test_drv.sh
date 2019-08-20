@@ -9,8 +9,7 @@ else
 	this_dir=${AUTOTEST_HOME}/ostest/util
 fi
 
-# Define test_mck_ko etc.
-source "${this_dir}/config"
+# E and test_mck_ko are defined in <ostest>/util/config
 
 usage()
 {
@@ -68,5 +67,6 @@ do
 	fi
 	path="$test_mck_device_dir/$devname"
 	$E mknod "$path" c $maj $min
+	$E chown `id -u`:`id -g` "$path"
 	echo "create charcter device $path($maj:$min)"
 done

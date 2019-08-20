@@ -1,1 +1,1 @@
-echo a > $mmapfile_name
+. ${AUTOTEST_HOME}/ostest/util/init/mmapfile.sh

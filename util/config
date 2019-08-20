@@ -94,6 +94,7 @@ mck_build_info=$mck_base/build-info
 mck_img=$mck_dir/mckernel.img
 #mcexec=`find "$mck_base/" -name mcexec | sort -r | head -n 1`
 mcexec=${mck_base}/bin/mcexec
+sudo_mcexec="sudo $mcexec"
 eclair=${mck_base}/bin/eclair
 mcctrl_ko=$ihk_dir/mcctrl.ko
 ihk_ko=$ihk_dir/ihk.ko

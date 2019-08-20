@@ -1,6 +1,3 @@
 if [ "$linux_run" == "yes" ]; then
-	swapoff -a
+    sudo swapoff -a
 fi
-
-# SEGV is detected by exit status
-ulimit -S -c 0

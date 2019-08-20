@@ -1,2 +1,2 @@
-rm -rf /tmp/ostest
+rm -f $pid_max_name
 

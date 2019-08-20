@@ -1,1 +1,1 @@
-sh "$insmod_test_drv_sh"
+. "$insmod_test_drv_sh"

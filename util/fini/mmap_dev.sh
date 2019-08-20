@@ -1,1 +1,1 @@
-sh "$rmmod_test_drv_sh"
+. "$rmmod_test_drv_sh"

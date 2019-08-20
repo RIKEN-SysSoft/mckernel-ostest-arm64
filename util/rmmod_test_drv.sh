@@ -8,7 +8,8 @@ else
 	# Invoked from autotest
 	this_dir=${AUTOTEST_HOME}/ostest/util
 fi
-source "${this_dir}/config"
+
+# E and test_mck_ko are defined in <ostest>/util/config
 
 usage()
 {

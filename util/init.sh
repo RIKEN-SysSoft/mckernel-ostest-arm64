@@ -1,8 +1,11 @@
 num_system_service_cpus()
 {
-	num_cpus=$((`lscpu --all --extended | wc -l` - 1))
+	num_cpus=$(lscpu --all --extended | awk '{print $6}' | grep -vE '(-|MAXMHZ)' |  wc -l)
 
-	if [ $num_cpus -eq 56 ]; then
+	if [ $num_cpus -eq 50 ]; then
+		host_core="0,1"
+		ikc_map="12-35:0+36-59:1"
+	elif [ $num_cpus -eq 56 ]; then
 		host_core="0,14,28,42"
 		ikc_map="1-13:0+15-27:14+29-41:28+43-55:42"
 	elif [ $num_cpus -eq 48 ]; then
@@ -20,7 +23,7 @@ num_system_service_cpus()
 	# Check if the above CPU allocation assumption holds true
 	if [ "$DRYRUN" != ":" ] && [ "$linux_run" == "no" ]; then
 		num_mck_cpus_assumed=$((num_cpus - host_core_num))
-		num_mck_cpus_actual=$((`lscpu --offline --extended | wc -l` - 1))
+		num_mck_cpus_actual=$(lscpu --offline --extended | awk '{print $6}' | grep -vE '(-|MAXMHZ)' | wc -l)
 		if [ $num_mck_cpus_assumed -ne $num_mck_cpus_actual ]; then
 			echo "Warning: # of McKernel CPUs assumed ($num_mck_cpus_assumed) doesn't match the actual ($num_mck_cpus_actual)"
 		fi
@@ -35,7 +38,7 @@ else
 	utildir=${AUTOTEST_HOME}/ostest/util
 fi
 
-# Define ihkosctl etc.
+# Define ihkosctl, E, mcexec etc.
 . ${utildir}/config
 
 export TEST_HOME=${TEST_HOME:-$app_dir} # run_rt_*.sh could define this
@@ -48,6 +51,8 @@ org_pid_max=/proc/sys/kernel/pid_max
 pid_max_name=${recorddir}/pid_max
 lv07_tmp=${recorddir}/lv07.txt
 lv07_tmp_before=${recorddir}/lv07_before.txt
+cpuset_execed=${recorddir}/cpuset_execed
+cpuset_forked=${recorddir}/cpuset_forked
 
 # ostype string
 ostype_str="Linux"
@@ -56,7 +61,7 @@ ostype_str="Linux"
 count=0
 
 # test user
-test_user_name="mck_test"
+test_user_name="ostest_test_user"
 
 # for siginfo TP send signal.
 signal_name="HUP INT QUIT ILL TRAP ABRT EMT FPE KILL BUS SEGV SYS PIPE ALRM TERM URG STOP TSTP CONT CHLD TTIN TTOU IO XCPU XFSZ VTALRM PROF WINCH PWR USR1 USR2"
@@ -125,6 +130,7 @@ do
   case $OPT in
     H)
       mcexec=""
+      sudo_mcexec="sudo"
       linux_run="yes"
       pidof_mcexec="pidof test_mck"
       trap ":" USR1
@@ -150,6 +156,7 @@ do
       DRYRUN=":"
       DRYRUN_WAIT="wait"
       mcexec='echo ${mcexec} '
+      sudo_mcexec='echo ${sudo_mcexec} '
       linux_exec='echo '
       trap ":" USR1
 
@@ -160,6 +167,8 @@ do
       app_dir='${app_dir}'
 
       # We don't use execve_comm and execve_arg_end in autotest
+
+      env_opt='${env_opt}'
 
       binfmt_prefix_comm='${binfmt_prefix_comm}'
 
@@ -185,6 +194,10 @@ do
 
       lv07_tmp='${lv07_tmp}'
       lv07_tmp_before='${lv07_tmp_before}'
+
+      cpuset_execed='${cpuset_execed}'
+      cpuset_forked='${cpuset_forked}'
+
       ;;
     h)
       usage
@@ -236,15 +249,15 @@ fi
 	if [ "$DRYRUN" != ":" ]; then
 	#### initialize ####
 	addusr=0
-	$E useradd $test_user_name
-	if [ "$?" -eq 0 ]; then
-		uid=`id -u $test_user_name`
-		gid=`id -g $test_user_name`
-		addusr=1
-	else
-		uid=1000
-		gid=1050
+	if ! id -u $test_user_name 2>/dev/null; then
+	    if ! $E useradd $test_user_name; then
+		echo "ERROR: useradd failed"
+		exit 1
+	    fi
+	    addusr=1
 	fi
+	uid=`id -u $test_user_name`
+	gid=`id -g $test_user_name`
 	echo "use uid:$uid gid:$gid"
 
 	#### console output setting ####
@@ -308,9 +321,5 @@ fi
 
 	if [ "$DRYRUN" != ":" ]; then
 		echo a > $mmapfile_name
-		dd if=/dev/zero of=${temp} bs=1M count=10
-		ln -s ${temp} ${link}
-
 		echo $ostype_str > $ostype_name
-		cat $org_pid_max > $pid_max_name
 	fi

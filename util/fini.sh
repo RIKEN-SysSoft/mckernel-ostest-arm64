@@ -21,10 +21,9 @@ echo "restore $orig_printk_setting => /proc/sys/kernel/printk"
 $E bash -c "echo $orig_printk_setting > /proc/sys/kernel/printk"
 
 rm -f $ostype_name
-rm -f $pid_max_name
-rm -f $link
-rm -f $temp
 
 if [ "$addusr" -eq 1 ]; then
-    $E userdel $test_user_name
+    if ! $E userdel $test_user_name; then
+	echo "ERROR: userdel failed"
+    fi
 fi

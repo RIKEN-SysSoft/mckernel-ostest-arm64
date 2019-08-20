@@ -1,2 +1,2 @@
-rm -rf /tmp/ostest
+. ${AUTOTEST_HOME}/ostest/util/fini/temp_link.sh
 

@@ -1,25 +1,20 @@
-initial_ulimit_orig=`ulimit -s`
-echo "ulimit -s 10MiB (10240 KiB)"
-ulimit -s 8192
-
-if [ $testno -ge 1 ]; then
-    if [ $mck_max_mem_size -ge 2244120412 ]; then
-	echo "ulimit -s 2GiB (2097152 KiB)"
-	ulimit -s 2097152
-    else
-	echo "## mem_stack_limits 2GiB SKIP ##"
-    fi
-fi
-
-if [ $testno -ge 2 ]; then
-    echo "ulimit -s unlimited"
-    ulimit -s unlimited
-fi
-
-ulimit_c_orig=`ulimit -c`
-echo "ulimit -c unlimited"
-ulimit -c unlimited
-
+# mcexec -s <stack_premap_size>:<max_stack_size>
 if [ "$linux_run" == "yes" ]; then
-    swapoff -a
+    ulimit_s_org=`ulimit -s`
+
+    case $testno in
+	0)
+	    ulimit -S -s $((10485760 / 1024))
+	    ;;
+	1)
+	    ulimit -S -s $((2147483648 / 1024))
+	    ;;
+	2 | 3)
+	    ulimit -S -s $((mck_max_mem_size_110p / 1024))
+	    ;;
+    esac
+
+    sudo swapoff -a
+
+    command_line=$(echo $command_line | sed 's/-s [,_${a-zA-Z0-9_}]* //')
 fi

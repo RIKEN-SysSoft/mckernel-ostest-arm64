@@ -43,13 +43,22 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 
 	echo "## lv09 ##"
 	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/init/lv09.sh
+	fi
+	if [ "$DRYRUN" != ":" ]; then
 	${mcexec} $execve_comm "${app_dir}/lv09-pgf" $execve_arg_end w $temp aaabbbcccdddeeefffggghhh\\n
 	else
 		echo '${mcexec} $execve_comm "${app_dir}/lv09-pgf" $execve_arg_end w $temp aaabbbcccdddeeefffggghhh\\n'
 	fi
 	${mcexec} $execve_comm "${app_dir}/lv09-pgf" $execve_arg_end r $temp
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/fini/lv09.sh
+	fi
 
 	echo "## lv11 ##"
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/init/lv11.sh
+	fi
 	${mcexec} $execve_comm "${app_dir}/lv11" $execve_arg_end w rp   $temp
 	${mcexec} $execve_comm "${app_dir}/lv11" $execve_arg_end w rwp  $temp
 	${mcexec} $execve_comm "${app_dir}/lv11" $execve_arg_end w rep  $temp
@@ -64,6 +73,9 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 	${mcexec} $execve_comm "${app_dir}/lv11" $execve_arg_end r wp   $temp
 	${mcexec} $execve_comm "${app_dir}/lv11" $execve_arg_end r wep  $temp
 	${mcexec} $execve_comm "${app_dir}/lv11" $execve_arg_end r ep   $temp
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/fini/lv11.sh
+	fi
 
 	echo "## lv12 ##"
 	${mcexec} $execve_comm "${app_dir}/lv12-kill"
@@ -125,22 +137,30 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 	fi
 
 	echo "## wait4 ##"
+	if [ "$DRYRUN" != ":" ]; then
+		. init/wait4.sh
+	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s wait4 -n 0 
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s wait4 -n 1 -- -f $pid_max_name
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s wait4 -n 2
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s wait4 -n 3
+	if [ "$DRYRUN" != ":" ]; then
+		. fini/wait4.sh
+	fi
 
 	echo "## env ##"
-	env_opt="-e AAA -e USER= -e a -e b -e ARCH=x86 -e ARCH=postk"
+	if [ "$DRYRUN" != ":" ]; then
+		. init/env.sh
+	fi
 	${mcexec} $env_opt $execve_comm "${app_dir}/test_mck" $execve_arg_end -s env -n 0
 
 	echo "## rt_sigsuspend ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s rt_sigsuspend -n 0
 
 	echo "## cpu_thread_limits ##"
-	# Spawning as many threads as cpus after setting RLIMIT_NPROC to 0
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_thread_limits -n 0 -- -t $mck_ap_num
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_thread_limits -n 1 -- -t $mck_ap_num
+	# Expecting failure when trying to spawn more threads than limited by RLIMIT_NPROC
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_thread_limits -n 0 -- -c $mck_ap_num -t $mck_ap_num
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_thread_limits -n 1 -- -c $mck_ap_num -t $mck_ap_num
 
 	echo "## gettid ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s gettid -n 0
@@ -210,7 +230,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	echo "## mmap_dev ##"
 
 	if [ "$DRYRUN" != ":" ]; then
-		sh "$insmod_test_drv_sh"
+		. "$insmod_test_drv_sh"
 	fi
 
 #REPEAL	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_dev -n 0 -- -d /dev/test_mck/mmap_dev -s 8192
@@ -220,7 +240,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s mmap_dev -n 2 -- -d /dev/test_mck/mmap_dev2 -s $(( ($page_size/8) * $page_size + $page_size ))
 
 	if [ "$DRYRUN" != ":" ]; then
-		sh "$rmmod_test_drv_sh"
+		. "$rmmod_test_drv_sh"
 	fi
 
 	echo "## tgkill ##"
@@ -283,16 +303,28 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s execve -n 5 -- -f "$app_dir/execve_app"
 
 	echo "## madvise ##"
+	
 	for tp_num in `seq 0 7`
 	do	
 		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n $tp_num -- -f $mmapfile_name
 	done
+
 #REPEAL madvise#8,9
+
+	# McKernel behaves differently than Linux in the followings
+	# 10 (008 in autotest): MADV_MERGEABLE on file map
+	# 11 (009 in autotest): MADV_UNMERGEABLE on file map
+	# 12 (010 in autotest): MADV_HUGEPAGE on file map
+	# 13 (011 in autotest): MADV_NOHUGEPAGE on file map
 	for tp_num in `seq 10 15`
 	do	
 		${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n $tp_num -- -f $mmapfile_name
 	done
+
+	# 014 in autotest, source is ostest/test_mck/src/madvise/016.c
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n 16
+
+	# 015 in autotest, source is ostest/test_mck/src/madvise/017.c
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s madvise -n 17
 
 	if [ "$DRYRUN" != ":" ]; then
@@ -315,7 +347,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 5 ]; then
 	fi
 
 	echo "## cpu_proc_limits ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_proc_limits -n 0 -- -p $mck_ap_num
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s cpu_proc_limits -n 0 -- -c $mck_ap_num -p $mck_ap_num
 
 	echo "## nfo ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s nfo -n 0
@@ -449,7 +481,9 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	${DRYRUN} ulimit -S -c unlimited
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s coredump -n 0
 	if [ "$DRYRUN" != ":" ]; then
-	ulimit -S -c 0
+		. ${AUTOTEST_HOME}/ostest/util/init/core.sh
+	fi
+	if [ "$DRYRUN" != ":" ]; then
 	mv core core.$$
 	echo "generate corefile: core.$$"
 	readelf -a core.$$
@@ -546,7 +580,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 3 -- -p $mck_max_cpus
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 4 -- -p $mck_max_cpus
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 5 -- -p $mck_max_cpus
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 6 -- -p $getaff_cpus -f "$app_dir/show_affinity" -o ${workdir}/cpuset_forked -- -p $getaff_cpus -o ${workdir}/cpuset_execed
+	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getaffinity -n 6 -- -p $getaff_cpus -f "$app_dir/show_affinity" -o $cpuset_forked -- -p $getaff_cpus -o $cpuset_execed
 
 	echo "## pthread_setaffinity ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s pthread_setaffinity -n 0 -- -p $mck_max_cpus
@@ -563,13 +597,13 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 8 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getcpu -n 0
 
 	echo "## getegid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getegid -n 0 -- -e $gid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getegid -n 0 -- -e $gid
 
 	echo "## geteuid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s geteuid -n 0 -- -e $uid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s geteuid -n 0 -- -e $uid
 
 	echo "## getgid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getgid -n 0 -- -g $gid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getgid -n 0 -- -g $gid
 
 	echo "## getppid ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getppid -n 0
@@ -578,13 +612,13 @@ fi # RT_BLOCK 8 end
 # RT_BLOCK 9 start
 if [ $sep_run_num -eq 0 -o $sep_run_num -eq 9 ]; then
 	echo "## getresgid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getresgid -n 0 -- -r $gid -e $gid -s $gid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getresgid -n 0 -- -r $gid -e $gid -s $gid
 
 	echo "## getresuid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getresuid -n 0 -- -r $uid -e $uid -s $uid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getresuid -n 0 -- -r $uid -e $uid -s $uid
 
 	echo "## getuid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getuid -n 0 -- -u $uid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s getuid -n 0 -- -u $uid
 
 	echo "## ipc ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s ipc -n 0
@@ -629,53 +663,53 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 9 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_get_priority_min -n 3
 
 	echo "## sched_getparam ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getparam -n 0
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getparam -n 1
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getparam -n 2
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getparam -n 0
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getparam -n 1
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getparam -n 2
 
 	echo "## sched_getscheduler ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getscheduler -n 0
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getscheduler -n 1
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getscheduler -n 0
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_getscheduler -n 1
 
 	echo "## sched_rr_get_interval ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 0
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 1
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 2
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 3
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 4
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 0
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 1
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 2
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 3
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_rr_get_interval -n 4
 
 	echo "## sched_setparam ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setparam -n 0
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setparam -n 1
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setparam -n 2
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setparam -n 0
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setparam -n 1
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setparam -n 2
 
 	echo "## sched_setscheduler ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 0
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 1
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 2
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 3
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 4
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 0
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 1
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 2
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 3
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_setscheduler -n 4
 
 	echo "## setfsgid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setfsgid -n 0 -- -f $gid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setfsgid -n 0 -- -f $gid
 
 	echo "## setfsuid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setfsuid -n 0 -- -f $uid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setfsuid -n 0 -- -f $uid
 
 	echo "## setgid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setgid -n 0 -- -g $gid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setgid -n 0 -- -g $gid
 
 	echo "## setregid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setregid -n 0 -- -r $gid -e $gid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setregid -n 0 -- -r $gid -e $gid
 
 	echo "## setresgid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setresgid -n 0 -- -r $gid -e $gid -s $gid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setresgid -n 0 -- -r $gid -e $gid -s $gid
 
 	echo "## setresuid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setresuid -n 0 -- -r $uid -e $uid -s $uid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setresuid -n 0 -- -r $uid -e $uid -s $uid
 
 	echo "## setreuid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setreuid -n 0 -- -r $uid -e $uid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setreuid -n 0 -- -r $uid -e $uid
 
 	echo "## setrlimit ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setrlimit -n 0
@@ -696,7 +730,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 9 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setrlimit -n 15
 
 	echo "## setuid ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setuid -n 0 -- -u $uid
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s setuid -n 0 -- -u $uid
 
 	echo "## waitid ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s waitid -n 0
@@ -709,7 +743,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 9 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s signalfd4 -n 2
 
 	echo "## gettimeofday ##"
-	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s gettimeofday -n 0
+	${sudo_mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s gettimeofday -n 0
 
 	echo "## sched_yield ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s sched_yield -n 0
@@ -763,7 +797,13 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s clock_getres -n 2
 
 	echo "## readlinkat ##"
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/init/readlinkat.sh
+	fi
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s readlinkat -n 0 -- -f ${temp} -l ${link}
+	if [ "$DRYRUN" != ":" ]; then
+		. ${AUTOTEST_HOME}/ostest/util/fini/readlinkat.sh
+	fi
 
 	echo "## fpregs ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s fpregs -n 0
@@ -791,7 +831,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	echo "## writecombine ##"
 
 	if [ "$DRYRUN" != ":" ]; then
-		sh "$insmod_test_drv_sh"
+		. "$insmod_test_drv_sh"
 	fi
 
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s writecombine -n 0 -- -d /dev/test_mck/writecombine
@@ -802,7 +842,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	max_node=`expr $max_node - 1`
 
 	if [ "$DRYRUN" != ":" ]; then
-		sh "$rmmod_test_drv_sh"
+		. "$rmmod_test_drv_sh"
 	fi
 
 	if [ $max_node -ge 2 ]; then
@@ -996,7 +1036,7 @@ fi # RT_BLOCK 10 end
 
 	echo "## force_exit ##"
 	if [ "$DRYRUN" != ":" ]; then
-		sh "$insmod_test_drv_sh"
+		. "$insmod_test_drv_sh"
 	fi
 
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s force_exit -n 0 -- -f $mmapfile_name -d /dev/test_mck/mmap_dev & $DRYRUN_WAIT
@@ -1007,7 +1047,7 @@ fi # RT_BLOCK 10 end
 	fi
 
 	if [ "$DRYRUN" != ":" ]; then
-		sh "$rmmod_test_drv_sh"
+		. "$rmmod_test_drv_sh"
 	fi
 
 	if [ "$DRYRUN" != ":" ] && [ "$linux_run" == "no" ]; then
