@@ -25,6 +25,7 @@ static void child_func(void)
 			cpu_pause();
 		}
 		printf("[child] in loop count=%d\n", i);
+		fflush(stdout);
 		usleep(100000);
 		*running_flag = 2;
 	}
@@ -38,6 +39,7 @@ static void parent_func(void)
 			cpu_pause();
 		}
 		printf("[parent] in loop count=%d\n", i);
+		fflush(stdout);
 		usleep(100000);
 		*running_flag = 1;
 	}
