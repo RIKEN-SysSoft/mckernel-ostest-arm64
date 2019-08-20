@@ -16,11 +16,20 @@ SETUP_EMPTY(TEST_SUITE, TEST_NUMBER)
 
 RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 {
-	unsigned long length = LARGE_PAGE_SIZE * 2;
+	unsigned long hugepagesize;
+	unsigned long length;
 	unsigned long pgsize_log = 0;
 	int large_page_flag;
 	int i;
-	
+	FILE *fp;
+  
+	fp = popen("grep Hugepagesize /proc/meminfo", "r");
+	tp_assert(fp, "opening /proc/meminfo failed.");
+	fscanf(fp, "Hugepagesize:       %ld kB", &hugepagesize);
+	hugepagesize *= 1024;
+	fclose(fp);
+	length = hugepagesize * 2;
+
 	shmid = shmget(IPC_PRIVATE, length, pgsize_log | SHM_HUGETLB | IPC_CREAT | SHM_R | SHM_W);
 	tp_assert(0 <= shmid, "shmget error.");
 	printf("shmid: 0x%x\n", shmid);
@@ -33,7 +42,7 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		shmaddr[i] = (char)(i);
 	}
 
-        large_page_flag = check_page_size((unsigned long)shmaddr, LARGE_PAGE_SIZE);
+        large_page_flag = check_page_size((unsigned long)shmaddr, hugepagesize);
 	// 注意：物理メモリのフラグメントが酷い場合にはノーマルページになるが、その場合は正常。(ページサイズは自動的に決まる)
 	tp_assert(large_page_flag != 0, "invalid page size?");
 	return NULL;

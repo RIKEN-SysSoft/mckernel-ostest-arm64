@@ -4,7 +4,8 @@
 #include "testsuite.h"
 
 static char* addr = (void*)-1;
-static const size_t length = 2 * LARGE_PAGE_SIZE;
+static size_t hugepagesize;
+static size_t length;
 static const int prot = PROT_READ | PROT_WRITE;
 static const int flag = MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB;
 static const int fd = -1;
@@ -17,6 +18,14 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
     char* start = NULL;
     char* end = NULL;
     int large_page_flag = -1;
+    FILE *fp;
+
+    fp = popen("grep Hugepagesize /proc/meminfo", "r");
+    tp_assert(fp, "opening /proc/meminfo failed.");
+    fscanf(fp, "Hugepagesize:       %ld kB", &hugepagesize);
+    hugepagesize *= 1024;
+    fclose(fp);
+    length = hugepagesize * 2;
 
     /* mmap */
     addr = mmap(NULL, length, prot, flag, fd, offset);
@@ -24,7 +33,7 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
     printf("mmap=%p\n", addr);
 		
     /* access */
-    start = (void*)align_up((unsigned long)addr, LARGE_PAGE_SIZE);
+    start = (void*)align_up((unsigned long)addr, hugepagesize);
     end = (void*)((unsigned long)start + length / 2);
     tp_assert(start < end, "address overflow.");
 
@@ -54,7 +63,7 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 #else /* for fx100 */
 	UNUSED_VARIABLE(tte);
 	UNUSED_VARIABLE(phys);
-        large_page_flag = check_page_size((unsigned long)start, LARGE_PAGE_SIZE);
+        large_page_flag = check_page_size((unsigned long)start, hugepagesize);
         if (!large_page_flag) {
             break;
         }
