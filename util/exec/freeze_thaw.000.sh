@@ -1,11 +1,22 @@
-. ${AUTOTEST_HOME}/ostest/util/exec/background.sh
-sleep 1
+eval $command_line &
+pid=$!
 
-"${app_dir}/freeze_thaw" 0 freeze
-for i in `seq 1 3`
-do
+sleep 1
+sudo "${app_dir}/freeze_thaw" 0 freeze
+sleep 3
+sudo "${app_dir}/freeze_thaw" 0 thaw
+
+timeout=10
+while [ -e /proc/$pid ]; do
     sleep 1
-    echo "sleep ${i} second elapsed."
+    timeout=$((timeout - 1))
+    if [ $timeout -le 0 ]; then
+	kill $pid
+	echo "RESULT: ng"
+	break;
+    fi
 done
-"${app_dir}/freeze_thaw" 0 thaw
-wait `$pidof_mcexec`
+
+if [ $timeout -gt 0 ]; then
+    echo "RESULT: ok"
+fi
