@@ -56,13 +56,13 @@ if [ "${linux_run}" != "yes" ]; then
 	$ihkosctl 0 kmsg > $show_struct_process_or_thread
 
 	nprocs=`awk '$4=="processes"{print $3}' $show_struct_process_or_thread`
-	if [ -n $nprocs ] && [ $nprocs -ne 0 ]; then
+	if [ -n $nprocs ] && [ "$nprocs" != "0" ]; then
 	    echo "$(basename $0): INFO: $nprocs process(es) remaining"
 	    rc=1
 	fi
 
 	nthreads=`awk '$4=="threads"{print $3}' $show_struct_process_or_thread`
-	if [ -n $nthreads ] && [ $nthreads -ne 0 ]; then
+	if [ -n $nthreads ] && [ "$nthreads" != "0" ]; then
 	    echo "$(basename $0): INFO: $nprocs thread(s) remaining"
 	    rc=1
 	fi
