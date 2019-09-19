@@ -73,6 +73,7 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		int new_mycore = -1;
 
 		printf("[child] running core %d\n", old_mycore);
+		fflush(stdout);
 
 		/* sync parent */
 		sem_post(sync_sem1);
@@ -86,15 +87,19 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		/* corenum check. */
 		if (*parent_core != old_mycore) {
 			printf("[child] before migrate prevcore %d, nowcore %d\n", old_mycore, new_mycore);
+			fflush(stdout);
 
 			if (old_mycore == new_mycore) {
 				printf("TP failed, not migrate child process.\n");
+				fflush(stdout);
 				_exit(-1);
 			}
 		} else {
 			printf("[child] migrate not required.\n");
+			fflush(stdout);
 		}
 		printf("[child] End process.\n");
+		fflush(stdout);
 		_exit(0);
 		break;
 	}
@@ -113,6 +118,7 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		/* child process to migrate parent core */
 		printf("[parent] running core %d\n", *parent_core);
 		printf("[parent] child process migrate/bind to core %d\n", *parent_core);
+		fflush(stdout);
 
 		CPU_ZERO(&cpuset);
 		CPU_SET(*parent_core, &cpuset);
@@ -120,14 +126,17 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		result = sched_setaffinity(pid, sizeof(cpuset), &cpuset);
 		if (result == -1) {
 			printf("errno = %d\n", errno);
+			fflush(stdout);
 			tp_assert(0, "child migrate/bind sched_setaffinity failed.");
 		}
 
 		/* parent core bind */
 		printf("[parent] parent process bind to core %d\n", *parent_core);
+		fflush(stdout);
 		result = sched_setaffinity(0, sizeof(cpuset), &cpuset);
 		if (result == -1) {
 			printf("errno = %d\n", errno);
+			fflush(stdout);
 			tp_assert(0, "parent bind sched_setaffinity failed.");
 		}
 
@@ -136,12 +145,14 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 
 		/* sync child, switch to child process */
 		printf("[parent] send sched_yield.\n");
+		fflush(stdout);
 		sem_post(sync_sem2);
 		result = sched_yield();
 		if (result == -1) {
 			tp_assert(0, "sched_yield failed.");
 		}
 		printf("[parent] End process.\n");
+		fflush(stdout);
 		break;
 	}
 	}
