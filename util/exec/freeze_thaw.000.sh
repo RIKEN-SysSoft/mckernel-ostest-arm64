@@ -8,4 +8,5 @@ do
     echo "sleep ${i} second elapsed."
 done
 "${app_dir}/freeze_thaw" 0 thaw
-wait `$pidof_mcexec`
+
+. ${AUTOTEST_HOME}/ostest/util/exec/wait.sh
