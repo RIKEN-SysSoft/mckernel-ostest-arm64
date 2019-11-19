@@ -25,7 +25,7 @@ if [ "${linux_run}" != "yes" ]; then
 	fi
 
 	# check child usage
-	getrusage_section $WORKDIR/output/ostest-getrusage.002.output child parent ${recorddir}/rusage.txt
+	getrusage_section $recordfile child parent ${recorddir}/rusage.txt
 
 	# ru_utime should be zero, near-two-second
 	getrusage_time ru_utime ${recorddir}/rusage.txt 1
