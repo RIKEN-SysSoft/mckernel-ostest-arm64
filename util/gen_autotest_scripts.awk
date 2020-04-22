@@ -1,8 +1,7 @@
 #!/usr/bin/awk -f
 
 # Usage: awk -f gen_autotest_scripts.awk dryrun.out
-# This puts scritps on /work/mctest/data/script/ and
-# the test list on /work/mcktest/ostest-testlist.
+# This puts scritps on /work/mctest/data/script/.
 #
 # Usage of the generated scripts:
 # McKernel run: AUTOTEST_HOME=/work/mcktest bash -x /work/mcktest/data/script/ostest-<test_name>.<test_num>
@@ -16,9 +15,6 @@ BEGIN {
     "cd " dir "/../.. && pwd -P" | getline autotest_home;
 
     scriptdir = sprintf("%s/data/script", autotest_home); 
-
-    testlistfile = sprintf("%s/data/ostest-testlist", autotest_home);
-    system("rm -f " testlistfile);
 
     testname = "#";
 }
@@ -34,7 +30,7 @@ BEGIN {
     script_bn = sprintf("ostest-%s.%03d", testname, testno);
     script = sprintf("%s/%s", scriptdir, script_bn);
 
-    print script;
+    # print script;
 
     print "#!/bin/sh\n"  > script;
 
@@ -80,6 +76,5 @@ BEGIN {
 
     system("chmod +x " script);
 
-    print script_bn >> testlistfile;
     testno++;
 }
