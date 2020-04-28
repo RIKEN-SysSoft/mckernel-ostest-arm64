@@ -66,9 +66,6 @@ if [ "${linux_run}" != "yes" ]; then
 	    echo "$(basename $0): INFO: $nprocs thread(s) remaining"
 	    rc=1
 	fi
-
-	# Pass OK/NG to runtestlist.sh
-	echo $rc > $WORKDIR/result.log
 fi
 
 exit $rc
