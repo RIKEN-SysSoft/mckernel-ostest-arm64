@@ -18,9 +18,9 @@ if [ "${linux_run}" != "yes" ]; then
 fi
 	
 if [ -f ${AUTOTEST_HOME}/ostest/util/exec/${testcase}.sh ]; then
-	. ${AUTOTEST_HOME}/ostest/util/exec/${testcase}.sh > $recordfile 2>&1
+	. ${AUTOTEST_HOME}/ostest/util/exec/${testcase}.sh 2>&1 | tee $recordfile
 else
-	eval $command_line > $recordfile 2>&1
+	eval $command_line 2>&1 | tee $recordfile
 	exit_status=$?
 fi
 
