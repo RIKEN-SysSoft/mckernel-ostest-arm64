@@ -1,13 +1,9 @@
 #!/bin/sh
 # config COPYRIGHT FUJITSU LIMITED 2015-2018
 
-if [ -z $AUTOTEST_HOME ]; then
-	# Invoked from <ostest>/util/run_testset_postk.sh
-	utildir=`pwd`
-else
-	# Invoked from autotest
-	utildir=${AUTOTEST_HOME}/ostest/util
-fi
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+OSTEST_INSTALL="${SCRIPT_PATH%/*/*}"
 
 KiB=1024
 MiB=$(($KiB * 1024))
@@ -39,22 +35,22 @@ fi
 #
 # shells
 #
-run_mck_sh=$utildir/run_mck.sh
-run_app_sh=$utildir/run_app.sh
-reboot_mck_sh=$utildir/reboot_mck.sh
-shutdown_mck_sh=$utildir/stop_mck.sh
+run_mck_sh=$OSTEST_INSTALL/bin/run_mck.sh
+run_app_sh=$OSTEST_INSTALL/bin/run_app.sh
+reboot_mck_sh=$OSTEST_INSTALL/bin/reboot_mck.sh
+shutdown_mck_sh=$OSTEST_INSTALL/bin/stop_mck.sh
 
-insmod_test_drv_sh=$utildir/insmod_test_drv.sh
-rmmod_test_drv_sh=$utildir/rmmod_test_drv.sh
+insmod_test_drv_sh=$OSTEST_INSTALL/bin/insmod_test_drv.sh
+rmmod_test_drv_sh=$OSTEST_INSTALL/bin/rmmod_test_drv.sh
 
-run_rt_sh=$utildir/run_rt.sh
-kmsgcat_sh=$utildir/kmsgcat.sh
+run_rt_sh=$OSTEST_INSTALL/bin/run_rt.sh
+kmsgcat_sh=$OSTEST_INSTALL/bin/kmsgcat.sh
 
-gdb_all_test_sh=$utildir/gdb_all_test.sh
-gdb_all_test_host_sh=$utildir/gdb_all_test_host.sh
-gdb_mcexec_sh=$utildir/gdb_mcexec.sh
-gdb_host_sh=$utildir/gdb_host.sh
-gdb_test_case_list=$utildir/gdb_test_case.list
+gdb_all_test_sh=$OSTEST_INSTALL/bin/gdb_all_test.sh
+gdb_all_test_host_sh=$OSTEST_INSTALL/bin/gdb_all_test_host.sh
+gdb_mcexec_sh=$OSTEST_INSTALL/bin/gdb_mcexec.sh
+gdb_host_sh=$OSTEST_INSTALL/bin/gdb_host.sh
+gdb_test_case_list=$OSTEST_INSTALL/bin/gdb_test_case.list
 
 #
 # directory
@@ -67,7 +63,7 @@ else
 fi
 
 mck_base=${MCK_DIR}
-app_base=${utildir}/../bin
+app_base=$OSTEST_INSTALL/bin
 mck_dir=${mck_base}/smp-arm64/kernel
 ihk_dir=${mck_base}/kmod
 SBINDIR=${mck_base}/sbin
@@ -116,8 +112,8 @@ test_mck_device_dir=/dev/test_mck
 
 mck_util_ko=$app_dir/mck_util.ko
 
-smp_resource_info=$utildir/smp_resource.info
-mcos_info=$utildir/mcos.info
+smp_resource_info=$OSTEST_INSTALL/bin/smp_resource.info
+mcos_info=$OSTEST_INSTALL/bin/mcos.info
 
 mounts=/proc/mounts
 mcos0_proc=$mcos_dir/mcos0_proc

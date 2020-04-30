@@ -1,15 +1,19 @@
 #!/bin/sh
 
-# It's sourced from /work/mcktest/data/script/ostest-* scripts.
+# It's sourced from /work/mcktest/data/script/ostests-* scripts.
+
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+OSTEST_INSTALL="${SCRIPT_PATH%/*/*}"
 
 echo "## $testname ##"
 rm -rf $recorddir && mkdir -p $recorddir && pushd $recorddir
 
 # Use recorddir and define mcexec, runHOST etc.
-. ${AUTOTEST_HOME}/ostest/util/init.sh
+. $OSTEST_INSTALL/bin/init.sh
 
-if [ -f ${AUTOTEST_HOME}/ostest/util/init/${testname}.sh ]; then
-	. ${AUTOTEST_HOME}/ostest/util/init/${testname}.sh
+if [ -f $OSTEST_INSTALL/bin/init/${testname}.sh ]; then
+	. $OSTEST_INSTALL/bin/init/${testname}.sh
 fi
 
 # To check if kmsg will be empty
@@ -17,18 +21,18 @@ if [ "${linux_run}" != "yes" ]; then
 	$ihkosctl 0 clear_kmsg
 fi
 	
-if [ -f ${AUTOTEST_HOME}/ostest/util/exec/${testcase}.sh ]; then
-	. ${AUTOTEST_HOME}/ostest/util/exec/${testcase}.sh 2>&1 | tee $recordfile
+if [ -f $OSTEST_INSTALL/bin/exec/${testcase}.sh ]; then
+	. $OSTEST_INSTALL/bin/exec/${testcase}.sh 2>&1 | tee $recordfile
 else
 	eval $command_line 2>&1 | tee $recordfile
-	exit_status=$?
+	exit_status=${PIPESTATUS[0]}
 fi
 
-if [ -f ${AUTOTEST_HOME}/ostest/util/fini/${testname}.sh ]; then
-	. ${AUTOTEST_HOME}/ostest/util/fini/${testname}.sh
+if [ -f $OSTEST_INSTALL/bin/fini/${testname}.sh ]; then
+	. $OSTEST_INSTALL/bin/fini/${testname}.sh
 fi
 
-. ${AUTOTEST_HOME}/ostest/util/fini.sh
+. $OSTEST_INSTALL/bin/fini.sh
 
 popd
 
@@ -36,10 +40,10 @@ popd
 if [ "${linux_run}" != "yes" ]; then
 	rc=0
 
-	if [ -f ${AUTOTEST_HOME}/ostest/util/check/${testcase}.sh ]; then
-		. ${AUTOTEST_HOME}/ostest/util/check/${testcase}.sh
+	if [ -f $OSTEST_INSTALL/bin/check/${testcase}.sh ]; then
+		. $OSTEST_INSTALL/bin/check/${testcase}.sh
 	else
-		. ${AUTOTEST_HOME}/ostest/util/check/result_is_ok.sh
+		. $OSTEST_INSTALL/bin/check/result_is_ok.sh
 	fi
 
 	# Check if kmsg is empty

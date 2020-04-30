@@ -30,16 +30,12 @@ num_system_service_cpus()
 	fi
 }
 
-if [ -z $AUTOTEST_HOME ]; then
-	# Invoked from <ostest>/util/run_testset_postk.sh
-	utildir=`pwd`
-else
-	# Invoked from autotest
-	utildir=${AUTOTEST_HOME}/ostest/util
-fi
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+OSTEST_INSTALL="${SCRIPT_PATH%/*/*}"
 
 # Define ihkosctl, E, mcexec etc.
-. ${utildir}/config
+. $OSTEST_INSTALL/bin/config
 
 export TEST_HOME=${TEST_HOME:-$app_dir} # run_rt_*.sh could define this
 

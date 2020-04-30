@@ -1,12 +1,16 @@
-#!/bin/sh
+#!/bin/bash
 
-if [ "$1" == "" ]; then
-    list=/work/mcktest/data/ostest-testlist
-else
-    list=$1
-fi
+# Generate autotest related scripts and expected results
+# Usage:
+# ./run_testset.sh -d > /tmp/dryrun.out
+# ./gen_autotest_scripts.awk /tmp/dryrun.out
+# ./gen_expected_results.sh
 
-while read line
-do
-    AUTOTEST_HOME=/work/mcktest bash -x data/linux/script/$line -H
-done < $list
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+. $AUTOTEST_HOME/bin/config.sh
+
+while read file; do
+    echo $file
+    bash $DATADIR/scripts/$file -H
+done < <(find $DATADIR/scripts -type f -name "ostest-*" | sed 's|.*/||' | grep -Fv -f blacklist)

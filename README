@@ -16,11 +16,8 @@ README COPYRIGHT FUJITSU LIMITED 2019
 
   テストバイナリ群は./binに生成される。
 
-  cleanの場合は下記引数で実行する
+  cleanの場合は下記引数で実行する。./bin/*の削除も行う。
   $ sh ./make_arm64.sh clean
-
-  ./bin/*の削除も行う。
-
 
 ■実行方法
   $ sudo sh ./util/run_rt_postk.sh -p <numa-setting#> -b -s <group_id>

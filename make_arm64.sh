@@ -51,3 +51,8 @@ while read line
 do
 	cp ${line} ./bin/
 done < ./util/bin_list.txt
+
+for i in init exec fini check; do
+    install -d bin/$i
+    install util/$i/*.sh bin/$i/
+done
