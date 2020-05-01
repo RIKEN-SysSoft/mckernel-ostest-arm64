@@ -994,22 +994,22 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 	if [ "$linux_run" == "no" ]; then
 	echo "## cpu_pa_info ##"
 	## cpu_pa_info test#0 ##
-	${linux_exec} "${app_dir}/cpu_pa_info" 0 0
+	${linux_exec} sudo "${app_dir}/cpu_pa_info" 0 0
 
 	## cpu_pa_info test#1 ##
-#	${linux_exec} "${app_dir}/cpu_pa_info" 0 1
+#	${linux_exec} sudo "${app_dir}/cpu_pa_info" 0 1
 
 	## cpu_pa_info test#2 ##
-	${linux_exec} "${app_dir}/cpu_pa_info" 0 2
+	${linux_exec} sudo "${app_dir}/cpu_pa_info" 0 2
 
 	## cpu_pa_info test#3 ##
-	${linux_exec} "${app_dir}/cpu_pa_info" 0 3
+	${linux_exec} sudo "${app_dir}/cpu_pa_info" 0 3
 
 	## cpu_pa_info test#4 ##
-	${linux_exec} "${app_dir}/cpu_pa_info" 0 4
+	${linux_exec} sudo "${app_dir}/cpu_pa_info" 0 4
 
 	## cpu_pa_info test#5 ##
-	${linux_exec} "${app_dir}/cpu_pa_info" 0 5
+	${linux_exec} sudo "${app_dir}/cpu_pa_info" 0 5
 	fi
 
 	if [ "$linux_run" == "no" ]; then
