@@ -13,4 +13,4 @@ AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
 while read file; do
     echo $file
     bash $DATADIR/scripts/$file -H
-done < <(find $DATADIR/scripts -type f -name "ostest-*" | sed 's|.*/||' | grep -Fv -f blacklist)
+done < <(find $DATADIR/scripts -type f -name "ostest-*" | sed 's|.*/||' | sort | grep -Fv -f blacklist)
