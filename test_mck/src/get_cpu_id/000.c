@@ -11,6 +11,7 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 	tp_assert(cpuid != -1, "get wrong value.");
 
 	printf("[pid=%d, tid=%d] process running on cpu=%d\n", getpid(), gettid(), cpuid);
+	system("[[ -f /proc/mckernel ]] && echo running on mckernel");
 
 	return NULL;
 }
