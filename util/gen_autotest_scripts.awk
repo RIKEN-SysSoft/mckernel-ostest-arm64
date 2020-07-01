@@ -14,7 +14,6 @@ BEGIN {
     "pwd -P" | getline cwd;
     "dirname " ARGV[0] | getline dir;
     "cd " dir "/../.. && pwd -P" | getline autotest_home;
-    "cd " dir "/.. && pwd -P" | getline ostest_install;
 
     scriptdir = sprintf("%s/data/scripts", autotest_home);
     system("rm -f " scriptdir "/ostest-*");
@@ -35,13 +34,16 @@ BEGIN {
 
     # print script;
 
-    print "#!/bin/sh\n"  > script;
+    print "#!/usr/bin/bash\n"  > script;
+
+    print "SCRIPT_PATH=$(readlink -m \"${BASH_SOURCE[0]}\")" >> script;
+    print "AUTOTEST_HOME=\"${SCRIPT_PATH%/*/*/*}\"\n" >> script;
 
     print "# Define linux_run" >> script;
-    printf(". %s/bin/linux_run.sh\n", ostest_install) >> script;
+    print ". $AUTOTEST_HOME/ostest/bin/linux_run.sh\n" >> script;
 
     print "# Define WORKDIR, DATADIR, MCKINSTALL etc." >> script;
-    printf(". %s/bin/config.sh\n", autotest_home) >> script;
+    print ". $AUTOTEST_HOME/bin/config.sh\n" >> script;
 
     # Switch recorddir and answerdir for McKernel run and Linux run
 
@@ -75,7 +77,7 @@ BEGIN {
 
     printf("command_line='%s'\n\n", command_line) >> script;
 
-    printf(". %s/bin/run.sh", ostest_install) >> script;
+    print ". $AUTOTEST_HOME/ostest/bin/run.sh" >> script;
 
     system("chmod +x " script);
 
