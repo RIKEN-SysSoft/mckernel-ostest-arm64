@@ -1,5 +1,9 @@
-#!/bin/sh
+#!/usr/bin/bash
 # run_testset_postk.sh COPYRIGHT FUJITSU LIMITED 2015-2018
+
+SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
+AUTOTEST_HOME="${SCRIPT_PATH%/*/*/*}"
+. $AUTOTEST_HOME/bin/config.sh
 
 recorddir=`pwd`
 
@@ -103,19 +107,19 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 2 ]; then
 
 	echo "## lv15 ##"
 	count=0
-	while [ $count -le 10 ]
+	while [ $count -le 0 ]
 	do
 		${mcexec} $execve_comm "${app_dir}/lv15-kill"
 		count=`expr $count + 1`
 	done
 	count=0
-	while [ $count -le 10 ]
+	while [ $count -le 0 ]
 	do
 		${mcexec} $execve_comm "${app_dir}/lv15-manon"
 		count=`expr $count + 1`
 	done
 	count=0
-	while [ $count -le 10 ]
+	while [ $count -le 0 ]
 	do	
 		${mcexec} $execve_comm "${app_dir}/lv15-mfile" $execve_arg_end $ostype_name
 		count=`expr $count + 1`
@@ -933,7 +937,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 		echo "## get_mempolicy set_mempoliacy mbind SKIP(max_node < 2) ##"
 	fi
 
-	echo "## track syscalls ##"
+	echo "## track_syscalls ##"
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s track_syscalls -n 0
 	if [ "$DRYRUN" != ":" ]; then
 	"$ihkosctl" 0 kmsg | grep -E "\(271, *\"process_vm_writev\"\):"
