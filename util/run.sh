@@ -47,10 +47,8 @@ if [ "${linux_run}" != "yes" ]; then
 	fi
 
 	# Check if kmsg is empty
-	$ihkosctl 0 kmsg > $recorddir/kmsg.log
-	if [ "`cat $recorddir/kmsg.log | wc -l`" -ne 1 ]; then
-	    echo "$(basename $0): WARNING: kmsg isn't empty."
-	fi
+	nlines=$($ihkosctl 0 kmsg | wc -l)
+	(( nlines > 1 )) && echo "$(basename $0): WARNING: kmsg isn't empty."
 
 	# Check if process/thread structs remain
 	show_struct_process_or_thread="$recorddir/show_struct_process_or_thread.log"
