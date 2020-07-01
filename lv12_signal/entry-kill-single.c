@@ -7,9 +7,9 @@
 
 void sig_handler(int sig_num)
 {
-	printf("sig_num = %d received.\n", sig_num);
+	printf("[  OK  ] sig_num = %d received.\n", sig_num);
 	if (signal(sig_num, SIG_DFL) == SIG_ERR) {
-		printf("signal function default failed. sig_num = %d\n", sig_num);
+		printf("[  NG  ] signal function default failed. sig_num = %d\n", sig_num);
 		return;
 	}
 	return;
@@ -19,11 +19,11 @@ int main(int argc, char** argv) {
 	int sig_num = SIGILL;
 
 	if (signal(sig_num, sig_handler) == SIG_ERR) {
-		printf("signal function set failed. sig_num = %d\n", sig_num);
+		printf("[ INFO ] signal function set failed. sig_num = %d\n", sig_num);
 		return 0;
 	}
 	if (kill(getpid(), sig_num)) {
-		printf("kill faild. sig_num = %d\n", sig_num);
+		printf("[  NG  ] kill failed. sig_num = %d\n", sig_num);
 		return 0;
 	}
 
