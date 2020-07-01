@@ -1,2 +1,14 @@
 ostest-freeze_thaw
 ostest-cpu_pa_info
+ostest-sched_yield.000
+ostest-binfmt.000
+lv11.000
+lv11.002
+lv11.006
+lv12.002
+mem_stack_limits.003
+mem_limits.002
+mem_limits.006
+ostest-get_rusage.000
+ostest-get_rusage.001
+force_exit.000
