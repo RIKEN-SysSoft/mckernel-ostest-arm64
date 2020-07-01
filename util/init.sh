@@ -1,33 +1,10 @@
 num_system_service_cpus()
 {
-	num_cpus=$(lscpu --all --extended | awk '{print $6}' | grep -vE '(-|MAXMHZ)' |  wc -l)
+	host_core=$(echo $MCREBOOTOPTION | grep -Eo '\-r [^ ]*' | sed 's/-r //' | sed 's/[^:]*:\([^+]*\)/\1,/g' | sed 's/,$//')
+	ikc_map=$(echo $MCREBOOTOPTION | grep -Eo '\-r [^ ]*' | sed 's/-r //')
 
-	if [ $num_cpus -eq 50 ]; then
-		host_core="0,1"
-		ikc_map="12-35:0+36-59:1"
-	elif [ $num_cpus -eq 56 ]; then
-		host_core="0,14,28,42"
-		ikc_map="1-13:0+15-27:14+29-41:28+43-55:42"
-	elif [ $num_cpus -eq 48 ]; then
-		host_core="0,12,24,36"
-		ikc_map="1-11:0+13-23:12+25-35:24+37-47:36"
-	elif [ $num_cpus -eq 16 ]; then
-		host_core="0,8"
-		ikc_map="1-7:0+9-15:8"
-	else
-		host_core="0"
-		ikc_map="1-${num_cpus}:$host_core"
-	fi
 	host_core_num=`echo $host_core | perl -ne '@cpus = split /,/; $ncpus = $#cpus + 1; print $ncpus . "\n";'`
-
-	# Check if the above CPU allocation assumption holds true
-	if [ "$DRYRUN" != ":" ] && [ "$linux_run" == "no" ]; then
-		num_mck_cpus_assumed=$((num_cpus - host_core_num))
-		num_mck_cpus_actual=$(lscpu --offline --extended | awk '{print $6}' | grep -vE '(-|MAXMHZ)' | wc -l)
-		if [ $num_mck_cpus_assumed -ne $num_mck_cpus_actual ]; then
-			echo "Warning: # of McKernel CPUs assumed ($num_mck_cpus_assumed) doesn't match the actual ($num_mck_cpus_actual)"
-		fi
-	fi
+	num_cpus=$(($(ncpus) + host_core_num))
 }
 
 SCRIPT_PATH=$(readlink -m "${BASH_SOURCE[0]}")
