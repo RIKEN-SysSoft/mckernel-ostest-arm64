@@ -840,11 +840,14 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 10 ]; then
 
 	${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s writecombine -n 0 -- -d /dev/test_mck/writecombine
 
+if false; then
 	mems_allowed=`${mcexec} $execve_comm "${app_dir}/test_mck" $execve_arg_end -s procfs -n 10 | grep "Mems_allowed:"`
 	max_node=`echo $mems_allowed | awk '{print $2}' | sed 's|,||g' |tr '[a-z]' '[A-Z]'`
 	max_node=`echo "obase=2; ibase=16; $max_node" | bc | wc -c`
 	max_node=`expr $max_node - 1`
-
+else
+	max_node=$(($(numa_list | tail -1) + 1))
+fi
 	if [ "$DRYRUN" != ":" ]; then
 		. "$rmmod_test_drv_sh"
 	fi
