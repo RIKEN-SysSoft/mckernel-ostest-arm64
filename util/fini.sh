@@ -20,8 +20,6 @@ $E bash -c "echo $orig_core_pattern > /proc/sys/kernel/core_pattern"
 echo "restore $orig_printk_setting => /proc/sys/kernel/printk"
 $E bash -c "echo $orig_printk_setting > /proc/sys/kernel/printk"
 
-rm -f $ostype_name
-
 if [ "$addusr" -eq 1 ]; then
     if ! $E userdel $test_user_name; then
 	echo "ERROR: userdel failed"

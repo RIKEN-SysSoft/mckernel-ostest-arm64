@@ -1,2 +1,2 @@
-rm -f $ostype_name
+#rm -f $ostype_name
 

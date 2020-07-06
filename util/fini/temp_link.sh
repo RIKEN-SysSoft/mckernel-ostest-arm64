@@ -1,2 +1,2 @@
 rm -f $link
-rm -f $temp
+#rm -f $temp

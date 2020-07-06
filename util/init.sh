@@ -294,5 +294,4 @@ fi
 
 	if [ "$DRYRUN" != ":" ]; then
 		echo a > $mmapfile_name
-		echo $ostype_str > $ostype_name
 	fi
