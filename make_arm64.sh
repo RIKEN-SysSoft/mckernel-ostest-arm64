@@ -1,7 +1,7 @@
 # make_arm64.sh COPYRIGHT FUJITSU LIMITED 2019
 #!/bin/sh
 
-. ${HOME}/.mck_test_config
+MCK_DIR=/work/mcktest/work/mck
 
 export ARCH=arm64
 export LIBIHK_DIR=${MCK_DIR}/lib64
