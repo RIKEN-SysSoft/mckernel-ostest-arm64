@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <pthread.h>
 
-#define MAX_THREAD_NUM 64
+#define MAX_THREAD_NUM 128
 
 int thread_num;
 char *filepath;
