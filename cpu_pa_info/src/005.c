@@ -4,7 +4,7 @@
 
 TEST_FUNC(TEST_NUMBER, os_num)
 {
-	const int count = 8;
+	const int count = 6/*8*/; /* ThunderX2 has 6 counters */
 	struct ihk_perf_event_attr attr[count];
 	int i = 0;
 	int ret = 0;
