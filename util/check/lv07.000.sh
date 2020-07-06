@@ -1,1 +1,1 @@
-. ${AUTOTEST_HOME}/ostest/util/check/all_lines.sh
+. ${AUTOTEST_HOME}/ostest/util/check/diff.sh

@@ -1,1 +1,2 @@
-. ${AUTOTEST_HOME}/ostest/util/check/all_lines.sh
+tail -1 $recordfile > $recorddir/stdout.txt
+grep -x 'Hello World' $recorddir/stdout.txt || rc=1

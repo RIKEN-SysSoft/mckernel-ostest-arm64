@@ -1,1 +1,1 @@
-(( $exit_status != 0 )) && rc=1
+(( exit_status != 0 )) && rc=1
