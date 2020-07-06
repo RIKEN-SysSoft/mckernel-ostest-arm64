@@ -45,6 +45,10 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		map[i] = (char *)mmap(NULL, PAGE_SIZE, prot,
 					MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 		*map[i] = 'c';
+		printf("range: %lx-%lx rw%cp\n",
+		       (unsigned long)map[i],
+		       (unsigned long)map[i] + PAGE_SIZE,
+		       i % 2 == 0 ? 'x' : '-');
 	}
 
 	/* dump */

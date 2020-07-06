@@ -25,6 +25,7 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 	unsigned long buf2;
 	off_t offset = 0;
 	off_t ret = 0;
+	char buf3;
 
 	/* allocate */
 	buf1 = calloc(PAGE_SIZE * 2, 1);
@@ -67,8 +68,16 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		printf("close() failed. %d\n", errno);
 		goto close_err;
 	}
+
+	/* check contents */
+#define PFN_MASK ((1UL << 55) - 1)
+	tp_assert(buf2 & (1UL << 63), "present bit is set");
+	tp_assert(((buf2 >> 55) & 0x3f) == 16, "page shift is 16");
+	tp_assert(buf2 & PFN_MASK, "PFN is non-zero");
+
 	free(buf1);
-	tp_assert(0, "you need check McKernel Log & Dump PAGEMAP.");
+	//tp_assert(0, "you need check McKernel Log & Dump PAGEMAP.");
+	return NULL;
 
 /* error case */
 lseek_err:

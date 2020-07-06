@@ -44,7 +44,15 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		printf("close() failed. %d\n", errno);
 		goto close_err;
 	}
-	tp_assert(0, "you need check McKernel Log & Dump PAGEMAP.");
+
+	/* check contents */
+#define PFN_MASK ((1UL << 55) - 1)
+	tp_assert((buf & (1UL << 63)) == 0, "present bit is not set");
+	tp_assert(((buf >> 55) & 0x3f) == 16, "page shift is 16");
+	tp_assert((buf & PFN_MASK) == 0, "PFN is zero");
+
+	//tp_assert(0, "you need check McKernel Log & Dump PAGEMAP.");
+	return NULL;
 
 /* error case */
 read_err:
