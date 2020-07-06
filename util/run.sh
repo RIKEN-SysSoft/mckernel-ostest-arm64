@@ -21,12 +21,19 @@ if [ "${linux_run}" != "yes" ]; then
 	$ihkosctl 0 clear_kmsg
 fi
 	
+# stop tracing while logging
+tracestate=$(shopt -po xtrace)
+(echo $tracestate | grep -q -) && set +x
+
 if [ -f $OSTEST_INSTALL/bin/exec/${testcase}.sh ]; then
 	. $OSTEST_INSTALL/bin/exec/${testcase}.sh 2>&1 | tee $recordfile
 else
 	eval $command_line 2>&1 | tee $recordfile
 	exit_status=${PIPESTATUS[0]}
 fi
+
+# restart tracing
+(echo $tracestate | grep -q -) && set -x
 
 if [ -f $OSTEST_INSTALL/bin/fini/${testname}.sh ]; then
 	. $OSTEST_INSTALL/bin/fini/${testname}.sh
