@@ -11,7 +11,11 @@
 static int test_mck_writecombine_vma_fault(struct vm_area_struct *vma, struct vm_fault *vmf)
 {
 #else
+#if defined(RHEL_RELEASE_CODE) && RHEL_RELEASE_CODE >= RHEL_RELEASE_VERSION(8, 2)
+static vm_fault_t test_mck_writecombine_vma_fault(struct vm_fault *vmf)
+#else
 static int test_mck_writecombine_vma_fault(struct vm_fault *vmf)
+#endif
 {
 	struct vm_area_struct *vma = vmf->vma;
 #endif
