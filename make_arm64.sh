@@ -3,7 +3,7 @@
 
 MCK_DIR=/work/mcktest/work/mck
 
-export ARCH=arm64
+export ARCH=$(case $(uname -p) in aarch64) echo arm64; ;; x86_64) echo x86; ;; esac)
 export LIBIHK_DIR=${MCK_DIR}/lib64
 export IHKUSR_INCLUDE_DIR=${MCK_DIR}/include
 export LIBDIR=${MCK_DIR}/lib64
@@ -30,8 +30,13 @@ fi
 
 while read line
 do
+	[[ $ARCH == x86 ]] && [[ $line =~ "test_usr" ]] && continue
 	pushd ${line}
-	$MAKECMD $MAKEOPT
+
+	ADDITIONALOPT=
+	[[ -e Makefile.$ARCH ]] && ADDITIONALOPT="-f Makefile.$ARCH"
+
+	$MAKECMD $MAKEOPT $ADDITIONALOPT
 	if [ $? != 0 ]; then
 		exit 1
 	fi
@@ -49,6 +54,7 @@ fi
 
 while read line
 do
+	[[ $ARCH == x86 ]] && [[ $line =~ "test_usr" ]] && continue
 	cp ${line} ./bin/
 done < ./util/bin_list.txt
 

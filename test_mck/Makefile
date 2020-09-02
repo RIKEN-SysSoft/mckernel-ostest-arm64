@@ -14,7 +14,11 @@ DEP_ROOT_DIR  := depend
 OBJ_ROOT_DIR  := obj
 INC_DIRS      := . $(SRC_ROOT_DIR) $(SRC_ROOT_DIR)/arch/$(ARCH)/include
 
-SRC_DIRS := $(shell find $(SRC_ROOT_DIR) -type d | grep -vw $(SRC_ROOT_DIR)/arch) $(shell find $(SRC_ROOT_DIR)/arch/$(ARCH) -type d)
+ifeq ($(ARCH),x86)
+	SRC_DIRS := $(shell find $(SRC_ROOT_DIR) -type d | grep -vw $(SRC_ROOT_DIR)/arch | grep -vE ^$(SRC_ROOT_DIR)/ptrace\$\|^$(SRC_ROOT_DIR)/evtstrm\$) $(shell find $(SRC_ROOT_DIR)/arch/$(ARCH) -type d)
+else
+	SRC_DIRS := $(shell find $(SRC_ROOT_DIR) -type d | grep -vw $(SRC_ROOT_DIR)/arch) $(shell find $(SRC_ROOT_DIR)/arch/$(ARCH) -type d)
+endif
 OBJ_DIRS := $(patsubst $(SRC_ROOT_DIR)%, $(OBJ_ROOT_DIR)%, $(SRC_DIRS))
 DEP_DIRS := $(patsubst $(SRC_ROOT_DIR)%, $(DEP_ROOT_DIR)%, $(SRC_DIRS))
 
@@ -73,7 +77,8 @@ __update_test_sute_list := $(shell $(FIND) $(SRC_ROOT_DIR)/ -type d |\
 	   $(RM) $(TEST_SUTE_LIST_NEW);\
 	 else\
 	   $(MV) $(TEST_SUTE_LIST_NEW) $(TEST_SUTE_LIST);\
-	 fi)
+	 fi) \
+	$(shell if [[ $(ARCH) == x86 ]]; then sed -i -E "/ptrace|evtstrm/d" $(TEST_SUTE_LIST); fi)
 
 __update_test_case_list := \
 	$(foreach dir,\
@@ -85,7 +90,8 @@ __update_test_case_list := \
 	   $(RM) $(TEST_CASE_LIST_NEW);\
 	 else\
 	   $(MV) $(TEST_CASE_LIST_NEW) $(TEST_CASE_LIST);\
-	 fi)
+	 fi) \
+	$(shell if [[ $(ARCH) == x86 ]]; then sed -i -E "/ptrace|evtstrm/d" $(TEST_CASE_LIST); fi)
 
 # Default target.
 all: $(TARGET)

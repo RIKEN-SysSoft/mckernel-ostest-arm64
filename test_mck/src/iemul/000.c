@@ -1,7 +1,9 @@
 /* 000.c COPYRIGHT FUJITSU LIMITED 2017 */
 #include "test_mck.h"
 #include "testsuite.h"
+#ifdef __aarch64__
 #include <asm/hwcap.h>
+#endif
 #include <sys/auxv.h>
 
 SETUP_EMPTY(TEST_SUITE, TEST_NUMBER)

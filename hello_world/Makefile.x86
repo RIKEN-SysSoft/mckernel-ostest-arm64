@@ -5,7 +5,9 @@ CFLAGS += -O0
 CFLAGS += -Wall
 
 default:
-	${CC} ${CFLAGS} glibc_hello_world.c -o glibc_hello_world
+	${CC} ${CFLAGS} glibc_hello_world.c -o hello_world
+	${CC} ${CFLAGS} glibc_exit_group.c -o exit_group
+	${CC} ${CFLAGS} glibc_goto_user.c -o goto_user
 
 clean:
-	${RM} -f glibc_hello_world
+	${RM} -f hello_world exit_group goto_user
