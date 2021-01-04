@@ -27,7 +27,17 @@ fi
 #  LOAD           0x00000000003b0000 0x0000100000240000 0x0000000000000000
 #                 0x0000000000010000 0x0000000000010000  RW     0x10000
 
-# one vma with the size of 3 pages is dumped when madvise is not supported
-if (( $(cat recorddir/sizeofbuf.out) != PAGE_SIZE * 3)); then
+# DODUMP
+if ! grep ${hex_addrs[0]} $recorddir/readelf.out > /dev/null; then
+    rc=1
+fi
+
+# DONTDUMP
+if grep ${hex_addrs[1]} $recorddir/readelf.out > /dev/null; then
+    rc=1
+fi
+
+# DODUMP
+if ! grep ${hex_addrs[2]} $recorddir/readelf.out > /dev/null; then
     rc=1
 fi

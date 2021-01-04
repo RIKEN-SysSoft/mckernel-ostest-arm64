@@ -29,6 +29,9 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 	fd = open(args->file, O_RDWR | O_CREAT);
 	tp_assert(fd != -1, "file open error.");
 
+	ret = ftruncate(fd, 3 * PAGE_SIZE);
+	tp_assert(ret == 0, "ftruncate error.");
+
 	buf = (unsigned long *)mmap(0, 3 * PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 	tp_assert(buf != MAP_FAILED, "mmap error.");
 

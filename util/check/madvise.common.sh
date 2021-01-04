@@ -12,3 +12,6 @@ IFS=$'\r\n' GLOBIGNORE='*' command eval "hex_addrs=($(cat $recorddir/hex_addrs))
 
 # List mmap areas included in the dump
 readelf -l $recorddir/$corefile | grep LOAD > $recorddir/readelf.out
+
+# 3 pages are grouped when madvise is disabled
+readelf -l $recorddir/$corefile | awk 'c > 0 { print $2; c--; } /LOAD/ && $3 ~ /'"${hex_addrs[0]}"'/ { c=1 }' > $recorddir/sizeofbuf.out
