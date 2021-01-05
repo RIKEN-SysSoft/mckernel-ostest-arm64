@@ -13,11 +13,7 @@ ostest-get_rusage.000
 ostest-get_rusage.001
 force_exit.000
 procfs.000
-procfs.001
-procfs.002
 procfs.003
-procfs.004
-procfs.005
 procfs.006
 procfs.007
 procfs.008
