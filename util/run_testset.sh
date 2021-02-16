@@ -23,7 +23,7 @@ if [ $sep_run_num -eq 0 -o $sep_run_num -eq 1 ]; then
 	if [ "$DRYRUN" != ":" ]; then
 	${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $num_app_cpus
 	else
-		echo '${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $num_app_cpus | sort'
+		echo '${mcexec} $execve_comm "${app_dir}/lv07-pth" $execve_arg_end $ostype_name $num_app_cpus | sort -n -k1'
 	fi
 
 	echo "## lv07_loop ##"

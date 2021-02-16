@@ -26,9 +26,9 @@ tracestate=$(shopt -po xtrace)
 (echo $tracestate | grep -q -) && set +x
 
 if [ -f $OSTEST_INSTALL/bin/exec/${testcase}.sh ]; then
-	. $OSTEST_INSTALL/bin/exec/${testcase}.sh 2>&1 | tee $recordfile
+	. $OSTEST_INSTALL/bin/exec/${testcase}.sh | tee $recordfile
 else
-	eval $command_line 2>&1 | tee $recordfile
+	eval $command_line | tee $recordfile
 	exit_status=${PIPESTATUS[0]}
 fi
 
