@@ -15,6 +15,7 @@
 static sem_t *sync_sem1 = MAP_FAILED;
 static sem_t *sync_sem2 = MAP_FAILED;
 static int *parent_core = MAP_FAILED;
+static int *order_flag = MAP_FAILED;
 
 SETUP_FUNC(TEST_SUITE, TEST_NUMBER)
 {
@@ -22,6 +23,7 @@ SETUP_FUNC(TEST_SUITE, TEST_NUMBER)
 	sync_sem1 = (sem_t *)mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 	sync_sem2 = (sem_t *)mmap(NULL, sizeof(sem_t), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 	parent_core = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	order_flag = (int *)mmap(NULL, sizeof(int), PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
 
 	return NULL;
 }
@@ -81,6 +83,7 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		/* sync parent */
 		sem_wait(sync_sem2);
 
+		*order_flag = 1;
 		/* after migrate, get cpunum */
 		new_mycore = sched_getcpu();
 
@@ -146,11 +149,14 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 		/* sync child, switch to child process */
 		printf("[parent] send sched_yield.\n");
 		fflush(stdout);
+		*order_flag = 0;
 		sem_post(sync_sem2);
 		result = sched_yield();
 		if (result == -1) {
 			tp_assert(0, "sched_yield failed.");
 		}
+		tp_assert(*order_flag == 1, "sched_yield don't schedule to child");
+
 		printf("[parent] End process.\n");
 		fflush(stdout);
 		break;
@@ -168,5 +174,5 @@ RUN_FUNC(TEST_SUITE, TEST_NUMBER)
 	} else {
 		tp_assert(0, "TP failed, child process wait() fail.");
 	}
-	return "check end order, [end child] -> [end parent]";
+	return NULL;
 }
